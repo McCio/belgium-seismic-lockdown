@@ -1,0 +1,266 @@
+
+```{r libraries/definitions, include=FALSE}
+library(stringi) # %s+%
+library(lubridate) # floor_date
+library(xts) # zoo
+library(fpp) # auto.arima
+library(tidyverse) # map_df, read_csv, group_by, summarize
+library(tsbox) # https://cran.r-project.org/web/packages/tsbox/vignettes/tsbox.html
+print_dec <- function(x, decimals=2) trimws(format(round(x, decimals), nsmall=decimals))
+    
+setwd("/media/data/Documents/Uni/spatiotemp/villalobos/project/")
+
+# UCCS
+domain <- c(-350000,350000); pattern <- "UCCS.*\\.csv"; name <- "UCCS"; description <- "Uccle, Bruxelles"
+# MEMS
+# domain <- c(-7200,7200); pattern <- "MEM.*.csv"; name <- "MEM"; description <- "Membach"
+```
+```{r import dataset, include=FALSE}
+seis <-
+  list.files(path="csv/", pattern=pattern) %>%
+  map_df(~read_csv("csv/" %s+% .))
+```
+
+# Data preparation
+```{r dataset description, echo=FALSE}
+long_description <- description %s+% " (" %s+% name %s+% " station)"
+long_description
+"Domain values: " %s+% domain[1] %s+% " to " %s+% domain[2] %s+% " nm"
+"Data from " %s+% format.POSIXct(min(seis$utc_second), "%Y-%m-%d %H:%M:%S") %s+% " to " %s+% format.POSIXct(max(seis$utc_second), "%Y-%m-%d %H:%M:%S")
+```
+
+```{r cleanup, echo=FALSE}
+out_domain <- (seis$min < domain[1] | seis$max > domain[2])
+invalid_values <- (seis$min == -1 & seis$max == 1) | (seis$min == 0 & seis$max == 0) | out_domain
+"Removing " %s+% sum(out_domain) %s+% " values out of domain, " %s+% (sum(invalid_values) - sum(out_domain)) %s+% " explicit NA"
+seis <-
+  seis %>%
+  mutate(min=replace(min, invalid_values, NA), max=replace(max, invalid_values, NA)) %>%
+  drop_na()
+# %>% mutate(belgian_second=with_tz(utc_second, "Europe/Brussels"))
+remove(out_domain, invalid_values) # free ~350 Mb from RAM
+seis.present <- length(seis$utc_second)
+seis.total <- max(as.numeric(seis$utc_second)) - min(as.numeric(seis$utc_second))
+seis.missing <- seis.total - seis.present
+seis.present %s+% " present values, " %s+% seis.missing %s+% " missing points (" %s+% print_dec(seis.present / seis.total * 100, 2) %s+% "% / " %s+% print_dec(seis.missing / seis.total * 100, 2) %s+% "%)"
+
+```
+
+```{r build_ts function}
+build_ts <- function(dset, periods=NULL, start=NULL, end=NULL, force_ms=T) {
+  dset.ts <- ts_zoo(dset)
+  if (!is.null(start) | !is.null(end)) {
+    dset.ts <- ts_span(dset.ts, start=start, end=end)
+  }
+  dset.ts <- ts_regular(dset.ts)
+  if (is.null(periods)) {
+    return(dset.ts)
+  }
+  if (is.vector(periods) & length(periods) == 1) {
+    periods <- periods[1]
+  }
+  if (is.integer(periods)){
+    if (force_ms) {
+      periods <- c(periods)
+    } else {
+      frequency(dset.ts) <- periods
+      return(dset.ts)
+    }
+  }
+  return(msts(dset.ts, periods))
+}
+```
+
+```{r group by hour}
+seis.h <- 
+  seis %>%
+  mutate(utc_hour=floor_date(with_tz(utc_second, "Europe/Brussels"), "1 hour")) %>%
+  group_by(utc_hour=as_datetime(date(utc_hour)) + hour(utc_hour) * 3600) %>% # this forces the hour to represent bruxelles local time in utc. tz-ed time is normally evaluated in utc by ts-related functions
+  summarize(mean_movement_s=mean(max-min)) 
+# we'll use ts_regular instead of completing data here
+# %>% complete(utc_hour=seq.POSIXt(from=min(seis$utc_second), to=max(seis$utc_second), by = as.difftime("1:0:0")))
+```
+
+```{r seasonplots}
+
+seis.h.start <- with_tz(as_datetime('2018-11-01T00:00:00'), "Europe/Brussels")
+seis.h.end <- with_tz(as_datetime('2020-03-01T00:00:00'), "Europe/Brussels")
+seis.h.msts <- build_ts(seis.h, periods = c(24), start = seis.h.start, end = seis.h.end)
+seasonplot(seis.h.msts, type="l", col=rainbow(7))
+legend("topleft", legend=weekdays(seis.h.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+tsdisplay(seis.h.msts, lag.max = 168*2)
+# tsdisplay(diff(seis.h.msts, 8), lag.max = 168*2)
+tsdisplay(diff(seis.h.msts, 24), lag.max = 168*2)
+tsdisplay(diff(seis.h.msts, 168), lag.max = 168*2)
+tsdisplay(diff(diff(seis.h.msts, 24), 168), lag.max = 168*2)
+
+seis.h.list <- as_datetime('2018-11-01T00:00:00') %m+% months(c(0:16))
+for (i in 1:(length(seis.h.list)-1)) {
+  seis.h.msts <- build_ts(seis.h, periods = c(24), start = seis.h.list[i], end = seis.h.list[i+1])
+  seasonplot(seis.h.msts,
+             type="l",
+             xlab="Hour (" %s+% seis.h.list[i] %s+% " - " %s+% print_dec(length(seis.h.msts) / as.numeric(seis.h.list[i+1] - seis.h.list[i])) %s+% " points per day)",
+             col=rainbow(7)
+             )
+  legend("topleft", legend=weekdays(seis.h.list[i] + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+}
+
+```
+
+```{r test of ts, eval=FALSE, include=FALSE}
+seis.h.xts <- build_ts(seis.h, start = seis.h.start, end = seis.h.end)
+# https://stats.stackexchange.com/questions/120806/frequency-value-for-seconds-minutes-intervals-data-in-r
+# https://robjhyndman.com/hyndsight/seasonal-periods/
+seis.h.msts <- build_ts(seis.h, periods = c(24, 168), start = seis.h.start, end = seis.h.end)
+taylor.fit <- tbats(seis.h.msts, num.cores = NULL)
+taylor.fit
+time(seis.h.msts)
+plot(taylor.fit)
+plot(forecast(taylor.fit))
+ts_summary(seis.h.msts)
+ts_plot(ts_trend(seis.h.xts))
+ts_ggplot(seis.h.xts, title = 'Hourly seismic movement', subtitle = long_description %s+% " from " %s+% seis.h.start %s+% " to " %s+% seis.h.end, ylab='mean movement per second (nm)')
+str(seis.h.xts)
+plot(seis.h.xts)
+seis.h.msts.dec <- decompose(seis.h.msts)
+#seis.h.msts.dec$
+plot(seis.h.msts.dec)
+length(seis.h.xts)
+frequency(seis.h.xts)
+deltat(seis.h.xts)
+```
+
+
+```{r parallel fourier, include=FALSE}
+
+combinations <- function(v1, v2=v1) {
+  A <- matrix(nrow=0, ncol=2)
+  for (i in v1) {
+    for (j in v2) {
+      A <- rbind(A, c(i, j))
+    }
+  }
+  return(A)
+}
+auto.arima.fourier <- function(msts.data, periods, ...) {
+  xreg.d <- fourier(msts.data, periods)
+  print("Starting auto.arima with # of fourier factors " %s+% periods)
+  fitma <- auto.arima(msts.data, ..., max.P=0, D=0, max.Q=0, seasonal=F, xreg=xreg.d)
+  print("Finished auto.arima with # of fourier factors " %s+% periods)
+  return(fitma)
+}
+
+library(parallel)
+if (!is.null(getDefaultCluster())) {
+  setDefaultCluster(makeCluster(6))
+}
+
+seis.h.start <- with_tz(as_datetime('2018-03-01T00:00:00'), "Europe/Brussels")
+seis.h.end <- with_tz(as_datetime('2020-03-01T00:00:00'), "Europe/Brussels")
+seis.h.msts <- build_ts(seis.h, periods = c(24, 168), start = seis.h.start, end = seis.h.end)
+co <- combinations(7:12)
+co <- co[order(rowSums(co)+co[,2], decreasing=T),]
+clusterExport(getDefaultCluster(), c("seis.h.msts", "co", "auto.arima.fourier", "fourier", "auto.arima", "%s+%"))
+fitma.list <- parLapply(getDefaultCluster(), 1:nrow(co), function(r) auto.arima.fourier(seis.h.msts, co[r,])) # TODO set arima parameters
+stopCluster(getDefaultCluster())
+
+aic_vals <- data.frame(Fourier24=integer(), Fourier168=integer(), AIC=integer())
+for (fitma in fitma.list) {
+  f24_l <- as.numeric(str_match(na.remove(str_extract(names(fitma$coef), "S\\d+-24")), "S(\\d+)-24")[,2])
+  f24 <- max(f24_l)
+  f168_l <- as.numeric(str_match(na.remove(str_extract(names(fitma$coef), "S\\d+-168")), "S(\\d+)-168")[,2])
+  f168 <- max(f168_l)
+  desc <- paste0("Seasonality component for ARMA(", fitma$arma[1], ",", fitma$arma[2], ")")
+  subdesc <- paste0("Fourier terms [24h: ", length(f24_l), " - max ", f24, "] [168h: ", length(f168_l), " - max ", f168, "]")
+  # plot(rowSums(fitma$xreg[,(c(1:(length(f24_l)*2)))][1:(168*2),]), type="l", col="red", ylim=c(-12,+24), main=desc)
+  # lines(rowSums(fitma$xreg[,(c((length(f24_l)*2+1):(length(f168_l)*2+length(f24_l)*2)))][1:(168*2),]), type="l", col="blue")
+  drift <- length(na.remove(str_extract(names(fitma$coef), "drift")))
+  plot(rowSums(fitma$xreg[(1):(168*2),(drift+1):ncol(fitma$xreg)]), type="l", col="red", ylim=c(-12,+24), main=desc, sub=subdesc, xlab="Hours")
+  aic_vals[nrow(aic_vals) + 1, ] <- c(length(f24_l), length(f168_l), fitma$aic)
+}
+p <- ggplot(aic_vals, aes(Fourier24, Fourier168)) + geom_tile(aes(fill = AIC), colour = "white") + scale_fill_gradient(low = "white", high = "steelblue")
+plot(p)
+
+min_aic <- min(aic_vals$AIC)
+minvals <- aic_vals[which(aic_vals$AIC == min_aic),]
+minvals
+
+fitted <- fitma.list[order(aic_vals$AIC)][[2]]
+tsdisplay(residuals(fitted))
+
+```
+
+
+```{r plot fourier}
+str(fitted$xreg)
+
+```
+
+
+
+```{r fourier}
+seis.h.start <- with_tz(as_datetime('2018-11-01T00:00:00'), "Europe/Brussels")
+seis.h.end <- with_tz(as_datetime('2020-03-01T00:00:00'), "Europe/Brussels")
+seis.h.msts <- build_ts(seis.h, periods = c(24, 168), start = seis.h.start, end = seis.h.end)
+fitted <- auto.arima(seis.h.msts, D=0, max.P=0, max.Q=0, xreg=fourier(seis.h.msts, c(3, 4)))
+plot(fitted)
+plot(residuals(fitted))
+tsdisplay(residuals(fitted))
+res.xts <- ts_zoo(residuals(fitted))
+res.msts <- msts(res.xts, c(24, 168))
+res.aic_vals_temp <- NULL
+res.aic_vals <- NULL
+for (i in 1:5) {
+  for (j in 1:5) {
+    #for (k in 1:5) {
+      res.xreg.d <- fourier(res.msts, c(i, j)  )  # daily  seasonality
+      res.fitma <- auto.arima(res.msts, D=0, max.P=0, max.Q=0, xreg=res.xreg.d)
+      res.aic_vals_temp <- cbind(i, j, res.fitma$aic)  #,k
+      res.aic_vals <- rbind(res.aic_vals, res.aic_vals_temp)
+      print("(" %s+% i %s+% ", " %s+% j %s+% ") = " %s+% res.fitma$aic)
+    #}
+  }
+}
+remove(res.aic_vals_temp, res.xreg.d, res.fitma)
+colnames(res.aic_vals) <- c("Fourier24", "Fourier168", "AIC")
+res.aic_vals <- data.frame(res.aic_vals)
+res.min_aic <- min(res.aic_vals$AIC)
+res.minvals <- res.aic_vals[which(res.aic_vals$AIC == res.min_aic),]
+res.p <- ggplot(res.aic_vals, aes(Fourier24, Fourier168)) + geom_tile(aes(fill = AIC), colour = "white") + scale_fill_gradient(low = "white", high = "steelblue")
+plot(res.p)
+res.minvals
+res.fitted <- auto.arima(res.msts, D=0, max.P=0, max.Q=0, xreg=fourier(res.msts, c(res.minvals$Fourier24, res.minvals$Fourier168)))
+plot(res.fitted)
+tsdisplay(residuals(fitted))
+tsdisplay(residuals(res.fitted))
+
+```
+
+```{r periodgram}
+library(spec)
+#pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2018-11-01T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
+pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2019-05-03T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
+
+topfreq <- pgram$freq[order(pgram$spec, decreasing = T)][1:100]
+topseas <- 1/topfreq
+topseas.h <- topseas/3600
+
+top95pc <- pgram$spec[pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*1)]
+top95freq <- pgram$freq[pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*1)][order(top95pc, decreasing = T)]
+top95pc <- pgram$spec[pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*1)][order(top95pc, decreasing = T)]
+top95seas.s <- 1/top95freq
+top95seas.h <- top95seas.s/3600
+top95pc/sd(pgram$spec)
+top95seas.h
+
+ylims <- 10^par("usr")[3:4]
+axis(side=3, at=top95freq, labels=as.integer(top95seas.h), padj = 1, las=2, cex.axis=0.8)
+abline(h=mean(pgram$spec) + sd(pgram$spec)*c(.5,1:3), lty="dotted", col=c("orange", "darkgreen", "blue", "red"))
+for (i in 1:length(top95freq)) {
+  color <- ifelse(top95pc[i] > (mean(pgram$spec) + sd(pgram$spec)*3), "red", ifelse(top95pc[i] > (mean(pgram$spec) + sd(pgram$spec)*2), "blue", ifelse(top95pc[i] > (mean(pgram$spec) + sd(pgram$spec)*1), "darkgreen", "orange")))
+  lines(x=c(top95freq[i], top95freq[i]), y=c(top95pc[i],ylims[2]), lty="dotted", col=color)
+  points(x=top95freq[i], y=top95pc[i], col=color)
+}
+axis(side=4, at=mean(pgram$spec) + sd(pgram$spec) * c(.5, 1:3), labels=c(".5", "1", "2", "3"), cex.axis=0.8)
+mtext(side=4, "spectrum sd ratio", line=1)
+```

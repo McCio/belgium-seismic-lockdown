@@ -1,0 +1,9 @@
+---
+title: "Project deep analysis"
+author: "Marco Ciotola"
+output: pdf_document
+toc: yes
+---
+
+```{r child = 'chapter1.Rmd'}
+```
