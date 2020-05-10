@@ -43,7 +43,6 @@ seis.present <- length(seis$utc_second)
 seis.total <- max(as.numeric(seis$utc_second)) - min(as.numeric(seis$utc_second))
 seis.missing <- seis.total - seis.present
 seis.present %s+% " present values, " %s+% seis.missing %s+% " missing points (" %s+% print_dec(seis.present / seis.total * 100, 2) %s+% "% / " %s+% print_dec(seis.missing / seis.total * 100, 2) %s+% "%)"
-
 ```
 
 ```{r build_ts function}
@@ -81,6 +80,16 @@ seis.h <-
 # %>% complete(utc_hour=seq.POSIXt(from=min(seis$utc_second), to=max(seis$utc_second), by = as.difftime("1:0:0")))
 ```
 
+```{r}
+head(seis.h)
+tides <- read.csv("dailymax.csv")
+days <-seq(from=as.Date("1983-1-01"), length.out = nrow(tides), by="day")
+ts.tides <- xts(tides$Level, order.by = days, frequency = 365)
+#xts objects have frequency set to daily by default, so we change it
+attr(ts.tides, 'frequency') <- 365
+plot(stl(as.ts(ts.tides), s.window = "periodic"))
+```
+
 ```{r seasonplots}
 
 seis.h.start <- with_tz(as_datetime('2018-11-01T00:00:00'), "Europe/Brussels")
@@ -104,7 +113,7 @@ for (i in 1:(length(seis.h.list)-1)) {
              )
   legend("topleft", legend=weekdays(seis.h.list[i] + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
 }
-
+    
 ```
 
 ```{r test of ts, eval=FALSE, include=FALSE}
@@ -185,7 +194,8 @@ min_aic <- min(aic_vals$AIC)
 minvals <- aic_vals[which(aic_vals$AIC == min_aic),]
 minvals
 
-fitted <- fitma.list[order(aic_vals$AIC)][[2]]
+fitted <- fitma.list[order(aic_vals$AIC)][[1]]
+fitted
 tsdisplay(residuals(fitted))
 
 ```
@@ -233,34 +243,36 @@ res.fitted <- auto.arima(res.msts, D=0, max.P=0, max.Q=0, xreg=fourier(res.msts,
 plot(res.fitted)
 tsdisplay(residuals(fitted))
 tsdisplay(residuals(res.fitted))
-
 ```
 
 ```{r periodgram}
 library(spec)
-#pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2018-11-01T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
-pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2019-05-03T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
+pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2018-11-01T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
+#pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2019-05-03T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
 
+library(spec)
+pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2018-11-01T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
 topfreq <- pgram$freq[order(pgram$spec, decreasing = T)][1:100]
 topseas <- 1/topfreq
 topseas.h <- topseas/3600
 
-top95pc <- pgram$spec[pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*1)]
-top95freq <- pgram$freq[pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*1)][order(top95pc, decreasing = T)]
-top95pc <- pgram$spec[pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*1)][order(top95pc, decreasing = T)]
+top95pc <- pgram$spec[pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*2)]
+top95freq <- pgram$freq[pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*2)][order(top95pc, decreasing = T)]
+top95pc <- pgram$spec[pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*2)][order(top95pc, decreasing = T)]
 top95seas.s <- 1/top95freq
+top95seas.s
 top95seas.h <- top95seas.s/3600
 top95pc/sd(pgram$spec)
 top95seas.h
 
 ylims <- 10^par("usr")[3:4]
 axis(side=3, at=top95freq, labels=as.integer(top95seas.h), padj = 1, las=2, cex.axis=0.8)
-abline(h=mean(pgram$spec) + sd(pgram$spec)*c(.5,1:3), lty="dotted", col=c("orange", "darkgreen", "blue", "red"))
+abline(h=mean(pgram$spec) + sd(pgram$spec)*c(.3,1:3), lty="dotted", col=c("orange", "darkgreen", "blue", "red"))
 for (i in 1:length(top95freq)) {
   color <- ifelse(top95pc[i] > (mean(pgram$spec) + sd(pgram$spec)*3), "red", ifelse(top95pc[i] > (mean(pgram$spec) + sd(pgram$spec)*2), "blue", ifelse(top95pc[i] > (mean(pgram$spec) + sd(pgram$spec)*1), "darkgreen", "orange")))
   lines(x=c(top95freq[i], top95freq[i]), y=c(top95pc[i],ylims[2]), lty="dotted", col=color)
   points(x=top95freq[i], y=top95pc[i], col=color)
 }
-axis(side=4, at=mean(pgram$spec) + sd(pgram$spec) * c(.5, 1:3), labels=c(".5", "1", "2", "3"), cex.axis=0.8)
+axis(side=4, at=mean(pgram$spec) + sd(pgram$spec) * c(.3, 1:3), labels=c(".3", "1", "2", "3"), cex.axis=0.8)
 mtext(side=4, "spectrum sd ratio", line=1)
 ```
