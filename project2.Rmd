@@ -1,12 +1,11 @@
 
 ```{r libraries, include=FALSE}
-knitr::opts_chunk$set(warning = F, message = F, fig.height = 360)
+knitr::opts_chunk$set(warning = F, message = F)
 library(stringi) # %s+%
 library(lubridate) # floor_date
 library(xts) # zoo
 library(fpp) # auto.arima
-# library(gridExtra) # for gg-plotting multiple plots
-library(cowplot) # for plot_grid
+library(gridExtra) # for gg-plotting multiple plots
 library(tidyverse) # map_df, read_csv, group_by, summarize
 library(tsbox) # https://cran.r-project.org/web/packages/tsbox/vignettes/tsbox.html
 print_dec <- function(x, decimals=2) trimws(format(round(x, decimals), nsmall=decimals))
@@ -204,14 +203,10 @@ seis.h.start <- as_datetime('2018-10-29T00:00:00')
 seis.h.end <- as_datetime('2020-03-01T00:00:00')
 seasonality.period <- 168
 seis.h.ts <- build_ts(seis.h, periods = c(seasonality.period), start = seis.h.start, end = seis.h.end, force_ms = T)
-plot_grid(
-  autoplot(seis.h.ts, main = "Hourly seismic movement", xlab = "Weeks", ylab = "mean movement (nm)"),
-  gghistogram(seis.h.ts) + xlab("mean movement (nm)"),
-  nrow = 2)
-plot_grid(
-  autoplot(acf(seis.h.ts, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
-  autoplot(pacf(seis.h.ts, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
-  nrow = 2)
+autoplot(seis.h.ts, main = "Hourly seismic movement", xlab = "Weeks", ylab = "mean movement (nm)")
+hist(seis.h.ts)
+autoplot(acf(seis.h.ts, na.action=na.pass, plot=F))
+autoplot(pacf(seis.h.ts, na.action=na.pass, plot=F))
 
 ```
 Once notice the composition is additive (the fluctuations does not seem to grow with the trend)
@@ -219,15 +214,11 @@ Once notice the composition is additive (the fluctuations does not seem to grow 
 dec.addi <- decompose(na.aggregate(seis.h.ts, floor))
 autoplot(dec.addi)
 dec.multi <- decompose(log(na.aggregate(seis.h.ts, floor)))
-autoplot(dec.multi) + labs(title="Decomposition of multiplicative time series (log-scale additive)")
-plot_grid(
-  autoplot(acf(dec.addi$random, na.action=na.omit, plot=F)) + scale_x_continuous(),
-  autoplot(acf(dec.multi$random, na.action=na.omit, plot=F)) + scale_x_continuous(),
-  nrow = 2)
-plot_grid(
-  autoplot(pacf(dec.addi$random, na.action=na.omit, plot=F)) + scale_x_continuous(),
-  autoplot(pacf(dec.multi$random, na.action=na.omit, plot=F)) + scale_x_continuous(),
-  nrow = 2)
+autoplot(dec.multi)
+autoplot(acf(dec.addi$random, na.action=na.omit, plot=F))
+autoplot(acf(dec.multi$random, na.action=na.omit, plot=F))
+autoplot(pacf(dec.addi$random, na.action=na.omit, plot=F))
+autoplot(pacf(dec.multi$random, na.action=na.omit, plot=F))
 ```
 
 We now extract the trend using a linear filter with smoothing parameter $p$ equal to 180 (almost half a year):
@@ -243,8 +234,7 @@ trend <- stats::filter(na.aggregate(seis.h.ts, floor), sides=2, filter = weights
 show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, overlap.ylab, diff.title, diff.ylab, diff.ylab.sec, diff.ylab.sec.accuracy=.1) {
   overlap_plot <-
     autoplot(compare, xlab=xlab, ylab=overlap.ylab) +
-      geom_line(aes(y=base, col="red"), show.legend = F) +
-      labs(title=paste0(base.desc, " vs ", compare.desc))
+      geom_line(aes(y=base, col="red"), show.legend = F)
   span <- max(compare, base, na.rm = T) - min(compare, base, na.rm = T)
   diff <- compare-base
   accu.lims <- diff.ylab.sec.accuracy / 100 * span * c(-3,3)
@@ -264,13 +254,14 @@ And they match:
 ```{r}
 plots <- show_overlap_and_diff(
   dec.addi$trend, trend, xlab="Weeks",
-  base.desc = "additive decomposition trend",
+  base.desc = "additive decomposition",
   compare.desc = paste0("linear filtered trend with p=", p),
   overlap.ylab = "Trend (nm)",
   diff.title = "Difference between trends",
   diff.ylab = "nm", diff.ylab.sec="% over trend span"
 )
-plot_grid(plots[[1]], plots[[2]], nrow = 2)
+plots[[1]]
+plots[[2]]
 
 ```
 
@@ -283,14 +274,15 @@ trend.s <- stats::filter(na.aggregate(seis.h.ts, floor), side=2, filter=weights.
 
 plots <- show_overlap_and_diff(
   dec.addi$trend, trend.s, xlab="Weeks",
-  base.desc = "additive decomposition trend",
+  base.desc = "additive decomposition",
   compare.desc = paste0("shift-filtered trend with f=", f),
   overlap.ylab = "Trend (nm)",
   diff.title = "Difference between trends",
   diff.ylab = "nm", diff.ylab.sec="% over trend span",
   diff.ylab.sec.accuracy = .01
 )
-plot_grid(plots[[1]], plots[[2]], nrow = 2)
+plots[[1]]
+plots[[2]]
 
 ```
 
@@ -319,7 +311,8 @@ plots <- show_overlap_and_diff(
   diff.ylab = "nm", diff.ylab.sec="% over seasonality span",
   diff.ylab.sec.accuracy = .01
 )
-plot_grid(plots[[1]], plots[[2]], nrow = 2)
+plots[[1]]
+plots[[2]]
 
 # difference is maybe given by na.aggregate used in decompose, while na.rm=T in manual seasonality?
 ```
@@ -336,7 +329,8 @@ plots <- show_overlap_and_diff(
   diff.ylab = "nm", diff.ylab.sec="% over residuals span",
   diff.ylab.sec.accuracy = .01
 )
-plot_grid(plots[[1]], plots[[2]], nrow = 2)
+plots[[1]]
+plots[[2]]
 
 ```
 
@@ -354,7 +348,8 @@ plots <- show_overlap_and_diff(
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
   diff.ylab.sec.accuracy = .01
 )
-plot_grid(plots[[1]], plots[[2]], nrow = 2)
+plots[[1]]
+plots[[2]]
 
 plots <- show_overlap_and_diff(
   seis.h.ts, dec.addi$trend+dec.addi$seasonal+dec.addi$random, xlab="Weeks",
@@ -365,7 +360,8 @@ plots <- show_overlap_and_diff(
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
   diff.ylab.sec.accuracy = .01
 )
-plot_grid(plots[[1]], plots[[2]], nrow = 2)
+plots[[1]]
+plots[[2]]
 
 ```
 
@@ -381,15 +377,15 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 
 
-```{r residuals cf arima}
-#, fig.height=480, fig.width=960, fig.path="/tmp/"}
+```{r residuals cf arima, fig.height=960, fig.width=960, fig.path="/tmp/"}
 residuals.acf <- autoplot(acf(residuals, na.action = na.pass, plot=F))
 residuals.pacf <- autoplot(pacf(residuals, na.action = na.pass, plot=F))
-plot_grid(residuals.acf, residuals.pacf, nrow=2)
+plot_grid(residuals.acf, residuals.pacf, labels = "AUTO", nrow=2)
 
 seis.h.ts.ar <- Arima(seis.h.ts, c(1,0,0))
 tsdiag(seis.h.ts.ar)
-
+library(cowplot)
+install.packages("cowplot")
 ```
 
 
@@ -401,7 +397,7 @@ tsdiag(seis.h.ts.ar)
 ```{r}
 seis.h.start <- with_tz(as_datetime('2018-11-01T00:00:00'), "Europe/Brussels")
 seis.h.end <- with_tz(as_datetime('2020-03-01T00:00:00'), "Europe/Brussels")
-seis.h.msts <- na.aggregate(build_ts(seis.h, periods = c(24, 168), start = seis.h.start, end = seis.h.end, force_ms = T), floor)
+seis.h.msts <- na.aggregate(build_ts(seis.h, periods = c(24, 168), start = seis.h.start, end = seis.h.end, force_ms = T))
 seis.h.msts %>% mstl() %>% autoplot() + xlab("Week")
 seis.h.msts.mstl <- seis.h.msts %>% mstl()
 plot(seis.h.msts.mstl[,2], main="trend")
@@ -411,18 +407,11 @@ lines(seasonality, col="red")
 plot(residuals,  main="residuals")
 lines(seis.h.msts.mstl[,5], col="red")
 autoplot(seis.h.msts.mstl[,5])
-mstl.res.plot <- autoplot(acf(seis.h.msts.mstl[,5], na.action = na.omit, plot=F)) + scale_x_continuous()
-bptests <- data.frame(lag=integer(), `p-value`=numeric())
-for (i in 1:10){
-  bptests[nrow(bptests) + 1, ] <- c(i, Box.test(seis.h.msts.mstl[,5], lag = i, fitdf = 0, type = "Box-Pierce")$p.value)
-}
-bptests
-bptests.plot <- 
-  ggplot(bptests, aes(lag, `p.value`), pch="o") + 
-    geom_point() + ylim(0,1) +
-    labs(title="Box-Pierce tests for lags 1 to 10") +
-    geom_hline(yintercept=0.05, linetype="dotted", color = "blue") +
-    scale_x_continuous(breaks=1:10)
-plot_grid(mstl.res.plot, bptests.plot, nrow = 2)
+acf(seis.h.msts.mstl[,5], na.action = na.omit)
+bptests <- c()
+for (i in 1:10)
+  bptests<- c(bptests, Box.test(seis.h.msts.mstl[,5], lag = i, fitdf = 0, type = "Box-Pierce")$p.value)
+plot(bptests, ylim = c(0,1))
+abline(h=0.05,col="blue",lty="dotted")
 
 ```
