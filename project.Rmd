@@ -16,10 +16,10 @@ setwd("/media/data/Documents/Uni/spatiotemp/villalobos/project/")
 
 
 ```{r import dataset, include=FALSE}
+# MEMS
+domain <- c(-7200,7200); pattern <- "MEM.*.csv"; name <- "MEM"; description <- "Membach"
 # UCCS
 domain <- c(-350000,350000); pattern <- "UCCS.*\\.csv"; name <- "UCCS"; description <- "Uccle, Bruxelles"
-# MEMS
-# domain <- c(-7200,7200); pattern <- "MEM.*.csv"; name <- "MEM"; description <- "Membach"
 seis <-
   list.files(path="csv/", pattern=pattern) %>%
   map_df(~read_csv("csv/" %s+% .))
@@ -167,6 +167,8 @@ text(x=blocks$end, y=hour(blocks$interval), labels = paste0(format(blocks$end, "
 text(x=blocks$start + blocks$interval/2, y=hour(blocks$interval), labels = paste0(hour(blocks$interval), "H"), cex=0.9, pos=3)
 remove(seis.complete, seis.missing.ids)
 
+Box.test(forec$model$residuals, type="Box-Pierce")
+
 ```
 
 ```{r gc_post_missing_analysis_bru, include=FALSE}
@@ -199,13 +201,18 @@ build_ts <- function(dset, periods=NULL, start=NULL, end=NULL, force_ms=T) {
 ```
 
 
-```{r}
+```{r plot data with (p)acf}
 seis.h.start <- as_datetime('2018-10-29T00:00:00')
 seis.h.end <- as_datetime('2020-03-01T00:00:00')
+seasonality.period <- 24
+seasonality.xlab <- "Days"
+seasonality.aggregate <- function(ds) na.aggregate(seis.h.ts, function(x) floor(x/7))
 seasonality.period <- 168
+seasonality.xlab <- "Weeks"
+seasonality.aggregate <- function(ds) na.aggregate(ds, floor)
 seis.h.ts <- build_ts(seis.h, periods = c(seasonality.period), start = seis.h.start, end = seis.h.end, force_ms = T)
 plot_grid(
-  autoplot(seis.h.ts, main = "Hourly seismic movement", xlab = "Weeks", ylab = "mean movement (nm)"),
+  autoplot(seis.h.ts, main = "Hourly seismic movement", xlab = seasonality.xlab, ylab = "mean movement (nm)"),
   gghistogram(seis.h.ts) + xlab("mean movement (nm)"),
   nrow = 2)
 plot_grid(
@@ -213,13 +220,14 @@ plot_grid(
   autoplot(pacf(seis.h.ts, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
   nrow = 2)
 
+
 ```
 Once notice the composition is additive (the fluctuations does not seem to grow with the trend)
-```{r}
-dec.addi <- decompose(na.aggregate(seis.h.ts, floor))
-autoplot(dec.addi)
-dec.multi <- decompose(log(na.aggregate(seis.h.ts, floor)))
-autoplot(dec.multi) + labs(title="Decomposition of multiplicative time series (log-scale additive)")
+```{r decompose}
+dec.addi <- decompose(seasonality.aggregate(seis.h.ts))
+autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period))
+dec.multi <- decompose(log(seasonality.aggregate(seis.h.ts)))
+autoplot(dec.multi) + labs(title="Decomposition of multiplicative time series (log-scale additive)", subtitle = paste0("Seasonality ", seasonality.period))
 plot_grid(
   autoplot(acf(dec.addi$random, na.action=na.omit, plot=F)) + scale_x_continuous(),
   autoplot(acf(dec.multi$random, na.action=na.omit, plot=F)) + scale_x_continuous(),
@@ -232,10 +240,10 @@ plot_grid(
 
 We now extract the trend using a linear filter with smoothing parameter $p$ equal to 180 (almost half a year):
 
-```{r}
+```{r linear trend}
 p <- floor(seasonality.period/2)
 weights <- rep(1/(2*p+1), times=2*p+1)
-trend <- stats::filter(na.aggregate(seis.h.ts, floor), sides=2, filter = weights)
+trend <- stats::filter(seasonality.aggregate(seis.h.ts), sides=2, filter = weights)
 ```
 
 
@@ -249,6 +257,14 @@ show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, 
   diff <- compare-base
   accu.lims <- diff.ylab.sec.accuracy / 100 * span * c(-3,3)
 
+  mse <- mean(diff^2)
+  mae <- mean(abs(diff))
+  rmse <- sqrt(mse)
+  R2 <- 1-(sum((diff)^2)/sum((base-mean(base))^2))
+  errorstring <- paste0("MSE=", mse, "    MAE=", mae, "    RMSE=", rmse, "    R2=", R2)
+  print(errorstring)
+
+  
   diff_plot <-
     autoplot(diff, ylab = paste0("Difference (", diff.ylab, ")"), xlab = xlab) +
       expand_limits(y=accu.lims) +
@@ -261,9 +277,9 @@ show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, 
 
 
 And they match:
-```{r}
+```{r linear trend plot}
 plots <- show_overlap_and_diff(
-  dec.addi$trend, trend, xlab="Weeks",
+  dec.addi$trend, trend, xlab=seasonality.xlab,
   base.desc = "additive decomposition trend",
   compare.desc = paste0("linear filtered trend with p=", p),
   overlap.ylab = "Trend (nm)",
@@ -276,13 +292,13 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 Then we use a filter able also to capture some seasonal effect so we will be able to find the residuals. We are going to choose $f=365$ so to have the moving average from the first day of the year to the last one and then shifted from the second day of the year to the first one of the following year and so, this is because we believe to have an yearly seasonality.
 
-```{r}
+```{r trend MA}
 f <- seasonality.period
 weights.s <- c(0.5, rep(1,f-1), 0.5)/f
-trend.s <- stats::filter(na.aggregate(seis.h.ts, floor), side=2, filter=weights.s)
+trend.s <- stats::filter(seasonality.aggregate(seis.h.ts), side=2, filter=weights.s)
 
 plots <- show_overlap_and_diff(
-  dec.addi$trend, trend.s, xlab="Weeks",
+  dec.addi$trend, trend.s, xlab=seasonality.xlab,
   base.desc = "additive decomposition trend",
   compare.desc = paste0("shift-filtered trend with f=", f),
   overlap.ylab = "Trend (nm)",
@@ -292,14 +308,15 @@ plots <- show_overlap_and_diff(
 )
 plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
+
 ```
 
 and they match (with some error of course) with the ones found with the decompose function.
 
 Finally we want to prove we can retrieve seasonality, in order to do so we can compute the average seasonality starting from the detrended series: to do so we put the time series into a matrix and we transform this matrix so each column contains elements of the same period and finally, we compute the mean of each column. We will check this with the element figure of the object decomposition i.e. the estimated seasonal figure not repeated for all the time series. 
 
-```{r}
-detrended <- na.aggregate(seis.h.ts, floor)-trend.s
+```{r trend figure}
+detrended <- seasonality.aggregate(seis.h.ts)-trend.s
 detrended <- window(detrended, end = c(end(detrended)[1], seasonality.period), extend=T)
 matrix <- t(matrix(data = detrended, nrow = seasonality.period))
 seasonality.figure <- as.ts(colMeans(matrix, na.rm = T))
@@ -308,10 +325,10 @@ seasonality <- rep(seasonality.figure, length(detrended)/length(seasonality.figu
 
 and they almost match: 
 
-```{r}
+```{r difference of trend figure}
 
 plots <- show_overlap_and_diff(
-  dec.addi$figure, seasonality.figure, xlab="Hours",
+  dec.addi$figure, seasonality.figure, xlab=seasonality.xlab,
   base.desc = "additive decomposition",
   compare.desc = paste0("mean-over-period after removal of shift-filtered trend with f=", f),
   overlap.ylab = "Seasonality (nm)",
@@ -324,11 +341,11 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 # difference is maybe given by na.aggregate used in decompose, while na.rm=T in manual seasonality?
 ```
 
-```{r}
-residuals <- na.aggregate(seis.h.ts, floor) - trend.s - seasonality
+```{r residuals}
+residuals <- seasonality.aggregate(seis.h.ts) - trend.s - seasonality
 
 plots <- show_overlap_and_diff(
-  dec.addi$random, residuals, xlab="Weeks",
+  dec.addi$random, residuals, xlab=seasonality.xlab,
   base.desc = "additive decomposition",
   compare.desc = paste0("mean-over-period after removal of shift-filtered trend with f=", f),
   overlap.ylab = "Residuals (nm)",
@@ -338,15 +355,20 @@ plots <- show_overlap_and_diff(
 )
 plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
+residuals.acf <- autoplot(acf(residuals, na.action = na.pass, plot=F)) + scale_x_continuous()
+residuals.pacf <- autoplot(pacf(residuals, na.action = na.pass, plot=F)) + scale_x_continuous()
+plot_grid(residuals.acf, residuals.pacf, nrow=2)
+
+
 ```
 
 In fact we are able to reconstruct the original series, with of course some missing value at the beginning and at the end because of the methods applied previously:
 
-```{r}
+```{r difference of reconstruct}
 ts <- residuals+trend.s+seasonality
 
 plots <- show_overlap_and_diff(
-  seis.h.ts, ts, xlab="Weeks",
+  seis.h.ts, ts, xlab=seasonality.xlab,
   base.desc = "original series",
   compare.desc = "reconstructed series",
   overlap.ylab = "Mean hourly movement (nm)",
@@ -357,7 +379,7 @@ plots <- show_overlap_and_diff(
 plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 plots <- show_overlap_and_diff(
-  seis.h.ts, dec.addi$trend+dec.addi$seasonal+dec.addi$random, xlab="Weeks",
+  seis.h.ts, dec.addi$trend+dec.addi$seasonal+dec.addi$random, xlab=seasonality.xlab,
   base.desc = "original series",
   compare.desc = "reconstructed series",
   overlap.ylab = "Mean hourly movement (nm)",
@@ -372,26 +394,387 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 
 
+```{r extract both 24 and 168}
+trend.s_compute <- function(ts.in, period) {
+  f <- period
+  weights.s <- c(0.5, rep(1,f-1), 0.5)/f
+  trend.s <- stats::filter(ts.in, side=2, filter=weights.s)
+  return(trend.s)
+}
+
+season_by_mean <- function(ts.in, period) {
+  freq <- frequency(ts.in)
+  if (freq == period) {
+    end <- c(end(ts.in)[1], period)
+  } else {
+    end <- c(((end(ts.in)[1] * freq) %/% period + 1) * (period/freq), freq)
+  }
+  extended <- window(ts.in, end = end, extend=T)
+  matrix <- t(matrix(data = extended, nrow = period))
+  seasonality.figure <- as.ts(colMeans(matrix, na.rm = T))
+  seasonality <- rep(seasonality.figure, length(extended)/length(seasonality.figure))[1:length(ts)]
+  return(list(figure=seasonality.figure, seasonal=seasonality))
+}
+
+trend_season <- function(ts.in, period) {
+  trend.s <- trend.s_compute(ts.in, period)
+  season <- season_by_mean(ts.in-trend.s, period)
+  season$trend <- trend.s
+  return(season)
+}
+
+aggregated <- seasonality.aggregate(seis.h.ts)
+season.24 <- trend_season(aggregated, 24)
+season.168 <- trend_season(aggregated-season.24$seasonal, 168)
+
+plot_grid(
+  autoplot(aggregated) + ylab("") + xlab(""),
+  autoplot(ts(season.24$seasonal, frequency=24)) + ylab("") + xlab(""),
+  autoplot(ts(season.168$seasonal, frequency=24)) + ylab("") + xlab(""),
+  autoplot(ts(season.168$trend, frequency=24)) + ylab("") + xlab(""),
+  autoplot(aggregated-season.24$seasonal-season.168$seasonal-season.168$trend) + ylab("") + xlab(""),
+  nrow = 5)
+
+season.24 <- trend_season(aggregated-season.168$seasonal, 24)
+season.168 <- trend_season(aggregated-season.24$seasonal, 168)
+
+season.24 <- trend_season(aggregated-season.168$seasonal, 24)
+season.168 <- trend_season(aggregated-season.24$seasonal, 168)
+
+plot_grid(
+  autoplot(aggregated) + ylab("") + xlab(""),
+  autoplot(ts(season.24$seasonal, frequency=24)) + ylab("") + xlab(""),
+  autoplot(ts(season.168$seasonal, frequency=24)) + ylab("") + xlab(""),
+  autoplot(ts(season.168$trend, frequency=24)) + ylab("") + xlab(""),
+  autoplot(aggregated-season.24$seasonal-season.168$seasonal-season.168$trend) + ylab("") + xlab(""),
+  nrow = 5)
 
 
+seasonbase.24 <- trend_season(aggregated, 24)
+seasonbase.168 <- trend_season(aggregated, 168)
+
+plot_grid(
+  autoplot(ts(seasonbase.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+      geom_line(aes(y=season.24$figure, col="red"), show.legend = F),
+  autoplot(ts(seasonbase.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+      geom_line(aes(y=season.168$figure, col="red")) +
+      geom_line(aes(y=season.168$figure + rep(season.24$figure, 7), col="blue")),
+  nrow = 2)
 
 
+plots <- show_overlap_and_diff(
+  seasonbase.168$figure, season.168$figure + rep(season.24$figure, 7), xlab="Hours",
+  base.desc = "168 from ds",
+  compare.desc = "168+24 from ds",
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between 168",
+  diff.ylab = "nm", diff.ylab.sec="% over season span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
-
-
-
-
-```{r residuals cf arima}
-#, fig.height=480, fig.width=960, fig.path="/tmp/"}
-residuals.acf <- autoplot(acf(residuals, na.action = na.pass, plot=F))
-residuals.pacf <- autoplot(pacf(residuals, na.action = na.pass, plot=F))
-plot_grid(residuals.acf, residuals.pacf, nrow=2)
-
-seis.h.ts.ar <- Arima(seis.h.ts, c(1,0,0))
-tsdiag(seis.h.ts.ar)
 
 ```
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r test_ts}
+seis.test.start <- as_datetime('2019-05-20T00:00:00')
+seis.test.end <- as_datetime('2020-03-02T00:00:00')
+
+seis.h.test <- build_ts(seis.h, periods = c(seasonality.period), start = seis.test.start, end = seis.test.end, force_ms = T)
+```
+
+```{r diffs acf/pacf}
+seis.h.test %>% ggtsdisplay(lag.max = 168)
+seis.h.test %>% diff() %>% ggtsdisplay(lag.max = 168*5)
+# seis.h.test %>% diff(D=2) %>% ggtsdisplay(lag.max = 168)
+# seis.h.test %>% diff(lag=24) %>% ggtsdisplay(lag.max = 168)
+# seis.h.test %>% diff() %>% diff(lag=24) %>% ggtsdisplay(lag.max = 24, main="Supposed model: ARIMA(24,1,0)(0,1,2)[24]") # ARIMA(0,1,0)(0,1,2)[24]
+# previous => ARIMA(5,1,0)(0,1,7)[24]
+# seis.h.test %>% diff() %>% diff(lag=24, D=2) %>% ggtsdisplay(lag.max = 168)
+seis.h.test %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5) # arima (0,0,0)(0,1,1/2)[168]
+seis.h.test %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5) # arima (0,1,0)(0,1,1)[168]
+# seis.h.test %>% diff() %>% diff(lag=168, D=2) %>% ggtsdisplay(lag.max = 168)
+seis.h.test %>% diff() %>% diff(lag=24) %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168)
+```
+
+
+
+
+```{r arima}
+
+
+plot_forecast <- function(forec) {
+  BP <- Box.test(forec$model$residuals, type="Box-Pierce")
+  autoplot(forec) +
+    labs(title=forec$method, subtitle = paste0("Box-Pierce p-value=", print_dec(BP$p.value, decimals=4))) +
+    autolayer(forec$mean, series="Forecast") -> plotted
+  return(plotted)
+}
+
+
+to_test <- list(
+  #c(0,0,0,0,0,1),  # BAD, Box-Pierce = 0
+  #c(0,0,0,0,0,2),  # BAD, Box-Pierce = 0
+  #c(0,0,0,0,1,1),  # nice, Box-Pierce = 0
+  c(0,0,0,0,1,2),
+  #c(0,0,0,0,1,3),  # CAN'T BE DONE: 3*168 = 504 > 350 (limit of arima on r)
+  #c(0,1,0,0,0,1),  # BAD, Box-Pierce = 0
+  c(0,1,0,0,1,1),
+  c(0,1,0,0,1,2),
+  c(2,0,0,0,1,0),  # hint from auto.arima D=1
+  c(5,0,0,0,1,0),  # hint from auto.arima D=1
+  c(3,1,1,0,1,0),  # hint from auto.arima D=1 d=1
+  c(3,1,1,0,1,1),  # after hint then ACF + PACF
+)
+if (!exists("models")){
+  models <- list()
+}
+for (model in to_test) {
+  model <- c(3,1,1,0,1,1)
+  fit.name <- paste0("fit", paste0(model, collapse = ""))
+  forecast.name <- paste0("forecast", paste0(model, collapse = ""))
+  print("SARIMA(" %s+% paste0(model[1:3], collapse = ",") %s+% ")(" %s+% paste0(model[4:6], collapse = ",") %s+% ")[" %s+% frequency(seis.h.test) %s+% "]")
+  models[[fit.name]] <- Arima(seis.h.test, model[1:3], model[4:6])
+  models[[forecast.name]] <- forecast(models[[fit.name]], h=168*10)
+}
+models[["fitauto"]] <- auto.arima(seis.h.test, D=1, approx=F, trace = T)
+models[["forecastauto"]] <- forecast(models[["fitauto"]], h=168*10)
+models[["fit311010"]] <- models[["fitauto"]]
+models[["forecast311010"]] <- forecast(models[["fit311010"]], h=168*10)
+
+# 000012 better than 000011, Box-Pierce = 0
+plotting.model <- models[["fit000012"]]
+plotting.forecast <- models[["forecast000012"]]
+# 010011 somehow better somehow worst than 000012, Box-Pierce = 0
+plotting.model <- models[["fit010011"]]
+plotting.forecast <- models[["forecast010011"]]
+# 010012 , Box-Pierce = 
+plotting.model <- models[["fit010012"]]
+plotting.forecast <- models[["forecast010012"]]
+# 311010 , Box-Pierce = 
+plotting.model <- models[["fit311010"]]
+plotting.forecast <- models[["forecast311010"]]
+# 311011 , Box-Pierce = 
+plotting.model <- models[["fit311011"]]
+plotting.forecast <- models[["forecast311011"]]
+
+checkresiduals(plotting.model)
+residuals.acf <- autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+plot_grid(residuals.acf, residuals.pacf, nrow=2)
+plot_forecast(plotting.forecast)
+plots <- show_overlap_and_diff(
+  seis.h.test, plotting.forecast$fitted, xlab=seasonality.xlab,
+  base.desc = "original series",
+  compare.desc = "reconstructed series",
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="% over ts span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+
+
+
+plotting.model <- models[["fit010012"]]
+plotting.forecast <- models[["forecast010012"]]
+checkresiduals(plotting.model)
+residuals.acf <- autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+plot_grid(residuals.acf, residuals.pacf, nrow=2)
+plot_forecast(plotting.forecast)
+plots <- show_overlap_and_diff(
+  seis.h.test, plotting.forecast$fitted, xlab=seasonality.xlab,
+  base.desc = "original series",
+  compare.desc = "reconstructed series",
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="% over ts span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+```
+
+
+```{r}
+(seis.test.start - seis.first.second)
+
+deseasoned24 <- seis.h.ts - seasonality
+autoplot(deseasoned24)
+frequency(deseasoned24)
+de24.test <- msts(window(deseasoned24, start=205), seasonal.periods = c(168))
+frequency(de24.test)
+autoplot(de24.test)
+de24.test %>% ggtsdisplay(lag.max = 168*2)
+de24.test %>% diff() %>% ggtsdisplay(lag.max = 168*2)
+de24.test %>% diff(D=2) %>% ggtsdisplay(lag.max = 168*2)
+de24.test %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*2)
+de24.test %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*2, main="Supposed model: ARIMA(0,1,0)(0,1,1)[168]")
+de24.test %>% diff() %>% diff(lag=168, D=2) %>% ggtsdisplay(lag.max = 168*2)
+
+if (!exists("fit010011de")){
+  fit010011de <- Arima(de24.test, c(0,1,0), c(0,1,1))
+}
+checkresiduals(fit010011de)
+residuals.acf <- autoplot(acf(fit010011de$residuals, na.action = na.pass, plot=F, lag.max=168*3)) + scale_x_continuous()
+residuals.pacf <- autoplot(pacf(fit010011de$residuals, na.action = na.pass, plot=F, lag.max=168*3)) + scale_x_continuous()
+plot_grid(residuals.acf, residuals.pacf, nrow=2)
+if (!exists("fit010011de.forec")){
+  fit010011de.forec <- forecast(fit010011de, h=168*10)
+}
+plot_forecast(forecast(fit010011de.forec, h=168*10))
+
+# NO  fit011011de <- Arima(de24.test, c(0,1,1), c(0,1,1))
+if (!exists("fit011011de")){
+  fit011011de <- Arima(de24.test, c(0,1,1), c(0,1,1))
+  arima
+}
+fit010011de$aic
+fit011011de$aic
+checkresiduals(fit011011de)
+residuals.acf <- autoplot(acf(fit011011de$residuals, na.action = na.pass, plot=F, lag.max=168*3)) + scale_x_continuous()
+residuals.pacf <- autoplot(pacf(fit011011de$residuals, na.action = na.pass, plot=F, lag.max=168*3)) + scale_x_continuous()
+plot_grid(residuals.acf, residuals.pacf, nrow=2)
+if (!exists("fit011011de.forec")){
+  fit011011de.forec <- forecast(fit011011de, h=168*10)
+}
+plot_forecast(forecast(fit011011de.forec, h=168*10))
+
+
+```
+
+
+
+
+```{r}
+
+seis.test.start <- as_datetime('2019-05-20T00:00:00')
+seis.test.end <- as_datetime('2020-03-02T00:00:00')
+
+seis.h.test <- build_ts(seis.h, periods = c(seasonality.period), start = seis.test.start, end = seis.test.end, force_ms = T)
+
+# First seasonal difference (quarterly)
+# seasonality.arima <- 24
+D<-1
+seis.h.test.ds<-diff(seis.h.test,differences=D)
+plot(seis.h.test.ds)
+abline(h=mean(seis.h.test.ds), col="red", lty="dotted")
+sd(seis.h.test.ds)
+tsdisplay(seis.h.test.ds, lag.max = 168*2)
+autoplot(acf(seis.h.test.ds, plot=F, lag.max = 168*2)) + scale_x_continuous()
+autoplot(pacf(seis.h.test.ds, plot=F, lag.max = 168*2)) + scale_x_continuous()
+seis.h.test.ds<-diff(seis.h.test,lag=seasonality.period,differences=D)
+plot(seis.h.test.ds)
+abline(h=mean(seis.h.test.ds), col="red", lty="dotted")
+sd(seis.h.test.ds)
+autoplot(acf(seis.h.test.ds, plot=F, lag.max = 168*2)) + scale_x_continuous()
+autoplot(pacf(seis.h.test.ds, plot=F, lag.max = 168*2)) + scale_x_continuous()
+tsdisplay(seis.h.test.ds, lag.max = 168*2)
+# pacf cuts off after p=168
+```
+
+```{r}
+fit <- auto.arima(seis.h.test, d=1, D=1, trace = T, parallel = T)
+```
+ Fitting models using approximations to speed things up...
+
+ ARIMA(2,0,2)(1,1,1)[24] with drift         : Inf
+ ARIMA(0,0,0)(0,1,0)[24] with drift         : 111462.7
+ ARIMA(1,0,0)(1,1,0)[24] with drift         : 101954.4
+ ARIMA(0,0,1)(0,1,1)[24] with drift         : Inf
+ ARIMA(0,0,0)(0,1,0)[24]                    : 111460.9
+ ARIMA(1,0,0)(0,1,0)[24] with drift         : 102426.5
+ ARIMA(1,0,0)(2,1,0)[24] with drift         : 101379
+ ARIMA(1,0,0)(2,1,1)[24] with drift         : Inf
+ ARIMA(1,0,0)(1,1,1)[24] with drift         : Inf
+ ARIMA(0,0,0)(2,1,0)[24] with drift         : 110647.6
+ ARIMA(2,0,0)(2,1,0)[24] with drift         : 101332.9
+ ARIMA(2,0,0)(1,1,0)[24] with drift         : 101878.7
+ ARIMA(2,0,0)(2,1,1)[24] with drift         : Inf
+ ARIMA(2,0,0)(1,1,1)[24] with drift         : Inf
+ ARIMA(3,0,0)(2,1,0)[24] with drift         : 101317.9
+ ARIMA(3,0,0)(1,1,0)[24] with drift         : 101858.5
+ ARIMA(3,0,0)(2,1,1)[24] with drift         : Inf
+ ARIMA(3,0,0)(1,1,1)[24] with drift         : Inf
+ ARIMA(4,0,0)(2,1,0)[24] with drift         : 101302.7
+ ARIMA(4,0,0)(1,1,0)[24] with drift         : 101845
+ ARIMA(4,0,0)(2,1,1)[24] with drift         : Inf
+ ARIMA(4,0,0)(1,1,1)[24] with drift         : Inf
+ ARIMA(5,0,0)(2,1,0)[24] with drift         : 101305.4
+ ARIMA(4,0,1)(2,1,0)[24] with drift         : 101304.5
+ ARIMA(3,0,1)(2,1,0)[24] with drift         : 101307.7
+ ARIMA(5,0,1)(2,1,0)[24] with drift         : 101307.7
+ ARIMA(4,0,0)(2,1,0)[24]                    : 101300.7
+ ARIMA(4,0,0)(1,1,0)[24]                    : 101843
+ ARIMA(4,0,0)(2,1,1)[24]                    : Inf
+ ARIMA(4,0,0)(1,1,1)[24]                    : Inf
+ ARIMA(3,0,0)(2,1,0)[24]                    : 101316
+ ARIMA(5,0,0)(2,1,0)[24]                    : 101303.4
+ ARIMA(4,0,1)(2,1,0)[24]                    : 101302.4
+ ARIMA(3,0,1)(2,1,0)[24]                    : 101305.8
+ ARIMA(5,0,1)(2,1,0)[24]                    : 101305.7
+
+ Now re-fitting the best model(s) without approximations...
+
+ ARIMA(4,0,0)(2,1,0)[24]                    : 101586.6
+
+ Best model: ARIMA(4,0,0)(2,1,0)[24]   
+ 
+```{r}
+library(car)
+
+autoplot(acf(seis.h.test.ds, plot=F, lag.max = 168*2)) + scale_x_continuous()
+autoplot(pacf(seis.h.test.ds, plot=F, lag.max = 168*2)) + scale_x_continuous()
+
+qqPlot(fit$residuals)
+gghistogram(fit$residuals)
+Box.test(fit$residuals, type="Box-Pierce")
+fit.forec <- forecast(fit, h=24*10)
+plot(fit.forec, xlim=c(250, 300))
+
+
+frequency(seis.h.test)
+p<-168;d<-0;q<-0;P<-0;D<-1;Q<-0;
+paste0("ARIMA(", p, ",", d, ",", q, ")(", P, ",", D, ",", Q, ")_", frequency(seis.h.test))
+fit <- Arima(seis.h.test, order=c(p,d,q), seasonal=c(P,D,Q))
+fit
+#Diagnostics
+tsdisplay(residuals(fit), lag.max=168*2)
+
+p<-1;d<-0;q<-2;P<-1;D<-0;Q<-2;
+fit <- Arima(seis.h.test, order=c(p,d,q), seasonal=c(P,D,Q))
+#Diagnostics
+tsdisplay(residuals(fit))
+forecast()
+
+
+```
 
 
 
@@ -401,9 +784,9 @@ tsdiag(seis.h.ts.ar)
 ```{r}
 seis.h.start <- with_tz(as_datetime('2018-11-01T00:00:00'), "Europe/Brussels")
 seis.h.end <- with_tz(as_datetime('2020-03-01T00:00:00'), "Europe/Brussels")
-seis.h.msts <- na.aggregate(build_ts(seis.h, periods = c(24, 168), start = seis.h.start, end = seis.h.end, force_ms = T), floor)
-seis.h.msts %>% mstl() %>% autoplot() + xlab("Week")
-seis.h.msts.mstl <- seis.h.msts %>% mstl()
+seis.h.msts <- seasonality.aggregate(build_ts(seis.h, periods = c(24, 168), start = seis.h.start, end = seis.h.end, force_ms = T))
+seis.h.msts %>% mstl(s.window = "periodic") %>% autoplot() + xlab("Week")
+seis.h.msts.mstl <- seis.h.msts %>% mstl(s.window = "periodic")
 plot(seis.h.msts.mstl[,2], main="trend")
 lines(trend.s, col="red")
 plot(rowSums(seis.h.msts.mstl[,3:4]), main="seasonality",type="l")
@@ -416,7 +799,6 @@ bptests <- data.frame(lag=integer(), `p-value`=numeric())
 for (i in 1:10){
   bptests[nrow(bptests) + 1, ] <- c(i, Box.test(seis.h.msts.mstl[,5], lag = i, fitdf = 0, type = "Box-Pierce")$p.value)
 }
-bptests
 bptests.plot <- 
   ggplot(bptests, aes(lag, `p.value`), pch="o") + 
     geom_point() + ylim(0,1) +
