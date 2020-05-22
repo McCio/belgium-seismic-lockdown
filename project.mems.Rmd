@@ -1,0 +1,26 @@
+---
+title: "Project Membach"
+author: "Marco Ciotola"
+date: "16/05/2020"
+output:
+  pdf_document:
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+#  html_document:
+#    mathjax: local
+#    self_contained: no
+#    fig_width: 6.5
+#    fig_height: 4
+---
+
+```{r tentatives, eval=FALSE, child='chapter1.Rmd', include=FALSE}
+```
+
+```{r set mems, include=FALSE}
+# MEMS
+domain <- c(-7200,7200); pattern <- "MEM.*\\.csv"; name <- "MEM"; description <- "Membach"; proj_file <- 'proj.mems.RData'
+```
+
+```{r project, child='project.Rmd'}
+```

@@ -118,3 +118,4 @@ def download_station(station: str):
 if __name__ == '__main__':
     download_station('UCCS')
     download_station('MEMS')
+    download_station('OSTB')

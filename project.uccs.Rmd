@@ -1,0 +1,25 @@
+---
+title: "Project Uccle"
+author: "Marco Ciotola"
+output:
+  pdf_document:
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+#  html_document:
+#    mathjax: local
+#    self_contained: no
+#    fig_width: 6.5
+#    fig_height: 4
+---
+
+```{r tentatives, eval=FALSE, child='chapter1.Rmd', include=FALSE}
+```
+
+```{r set uccs, include=FALSE}
+# UCCS
+domain <- c(-350000,350000); pattern <- "UCCS.*\\.csv"; name <- "UCCS"; description <- "Uccle, Bruxelles"; proj_file <- 'proj.uccs.RData'
+```
+
+```{r project, child='project.Rmd'}
+```
