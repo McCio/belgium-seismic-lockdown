@@ -24,3 +24,179 @@ domain <- c(-7200,7200); pattern <- "MEM.*\\.csv"; name <- "MEM"; description <-
 
 ```{r project, child='project.Rmd'}
 ```
+
+
+```{r}
+plot(seis.h, xaxt="n", type="l")
+axis.POSIXct(1, at=seq.POSIXt(from=seis.h.start, to=seis.h.end, by = "1 month"), format="%m-%y", cex=0.8)
+
+hist(seis.h.train)
+plot(log(seis.h.train))
+hist(log(seis.h.train))
+train.bc.lambda <- BoxCox.lambda(seis.h.train)
+train.bc <- BoxCox(seis.h.train, train.bc.lambda)
+plot(train.bc)
+gghistogram(train.bc, add.normal = T)
+gg_qqplot(seis.h.train) + 
+        labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles")
+gg_qqplot(log(seis.h.train)) + 
+        labs(title="Q-Q plot for log(training) dataset") + ylab("Sample quantiles")
+gg_qqplot(train.bc) + 
+        labs(title="Q-Q plot for BoxCox(training) dataset") + ylab("Sample quantiles")
+
+
+train.bc %>% ggtsdisplay(lag.max = 168*5)
+train.bc %>% diff() %>% ggtsdisplay(lag.max = 168*5)
+train.bc %>% diff(lag=24) %>% ggtsdisplay(lag.max = 168)
+train.bc %>% diff() %>% diff(lag=24) %>% ggtsdisplay(lag.max = 168)
+train.bc %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5)
+train.bc %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5) # arima (0,1,0)(0,1,1)[168]
+train.bc %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168) # arima (0,1,0)(0,1,1)[168]
+# acf cuts off after p=168, pacf shows peaks each 168
+train.bc %>% diff() %>% diff(lag=24) %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5)
+```
+
+
+```{r arima}
+to_test <- list(
+  c(0,1,0,0,1,1)
+)
+
+if (!exists("models")){
+  models <- list()
+}
+for (model in to_test) {
+  # model <- c(4,1,2,0,1,0)
+  fit.name <- paste0("fit", paste0(model, collapse = ""))
+  forecast.name <- paste0("forecast", paste0(model, collapse = ""))
+  print("SARIMA(" %s+% paste0(model[1:3], collapse = ",") %s+% ")(" %s+% paste0(model[4:6], collapse = ",") %s+% ")[" %s+% frequency(seis.h.train) %s+% "]")
+  if (!(fit.name %in% names(models))) {
+    models[[fit.name]] <- Arima(seis.h.train, model[1:3], model[4:6], lambda=train.bc.lambda)
+  }
+  if (!(forecast.name %in% names(models))) {
+    models[[forecast.name]] <- forecast(models[[fit.name]], h=168*18, lambda=train.bc.lambda)
+  }
+}
+#models[["fitauto"]] <- auto.arima(train.bc, D=1, approx=F, trace = T)
+#models[["forecastauto"]] <- forecast(models[["fitauto"]], h=168*18)  
+#models[["fit311010"]] <- models[["fitauto"]]
+#models[["fit412010"]] <- fit
+#models[["forecast412010"]] <- forecast(models[["fit412010"]], h=168*18)
+
+for (model in to_test) {
+  # model <- c(4,1,2,0,1,0)
+  fit.name <- paste0("fit", paste0(model, collapse = ""))
+  forecast.name <- paste0("forecast", paste0(model, collapse = ""))
+  print("SARIMA(" %s+% paste0(model[1:3], collapse = ",") %s+% ")(" %s+% paste0(model[4:6], collapse = ",") %s+% ")[" %s+% frequency(seis.h.train) %s+% "]")
+  if ((fit.name %in% names(models))) {  if ((forecast.name %in% names(models))) {
+    plotting.model <- models[[fit.name]]
+    plotting.forecast <- models[[forecast.name]]
+    checkresiduals(plotting.model)
+    residuals.acf <- autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+    residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+    print(plot_grid(residuals.acf, residuals.pacf, nrow=2))
+    print(plot_forecast(plotting.forecast) + 
+      autolayer(BoxCox(seis.h.test, train.bc.lambda), series="Original"))
+    plots <- show_overlap_and_diff(
+      seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
+      base.desc = "original series",
+      compare.desc = paste0("refit with ", plotting.forecast$method),
+      overlap.ylab = "Mean hourly movement (nm)",
+      diff.title = "Difference between ts",
+      diff.ylab = "nm", diff.ylab.sec="% over ts span",
+      diff.ylab.sec.accuracy = .01
+    )
+    
+    print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
+    accuracy(plotting.forecast, seis.h.test)
+    # qqPlot(plotting.model$residuals, main = paste0("Q-Q plot for ", plotting.forecast$method), xlab = "residuals")
+    print(gg_qqplot(plotting.model$residuals) + 
+        labs(title=paste0("Q-Q plot for ", plotting.forecast$method, " residuals")) + ylab("Residuals quantiles")
+    )
+  }}
+}
+
+
+```
+
+
+```{r}
+#fit <- auto.arima(seis.h.train, d=1, D=1, max.p=5, max.q=2, max.P=5, max.Q=2, max.order=10, trace = T, parallel = T)
+```
+
+
+
+
+
+```{r mstl on msts}
+seis.h.train.m <- msts(seis.h.train, c(24, 168))
+seis.mstl <- seis.h.train.m %>% mstl(s.window="periodic", lambda=train.bc.lambda) #c(15, 7))
+seis.mstl.fc <- forecast(seis.mstl, h=168*18, lambda=train.bc.lambda)
+
+autoplot(seis.mstl) + xlab("Week")
+plot(seis.mstl[,2], main="trend")
+lines(trend.s, col="red")
+plot(rowSums(seis.mstl[,3:4]), main="seasonality",type="l")
+lines(seasonality, col="red")
+plot(seis.mstl[,5],  main="residuals")
+lines(residuals, col="red")
+gg_qqplot(seis.mstl[,5]) + 
+  labs(title=paste0("Q-Q plot for ", seis.mstl.fc$method, " residuals")) + ylab("Residuals quantiles") + xlab("Theoretical quantiles")
+
+plotting.model <- seis.mstl
+plotting.forecast <- seis.mstl.fc
+checkresiduals(plotting.model[,5])
+Box.test(plotting.forecast$model$residuals, type="L")
+residuals.acf <- autoplot(acf(plotting.model[,5], na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+residuals.pacf <- autoplot(pacf(plotting.model[,5], na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+plot_grid(residuals.acf, residuals.pacf, nrow=2)
+
+plot_forecast(plotting.forecast) + 
+  autolayer(seis.h.test, series="Test") + 
+  autolayer(seis.h.train, series="Train")
+plots <- show_overlap_and_diff(
+  seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
+  base.desc = "train series",
+  compare.desc = paste0("refit with ", plotting.forecast$method),
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="% over ts span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+plots <- show_overlap_and_diff(
+  seis.h.test[1:length(plotting.forecast$mean)], plotting.forecast$mean, xlab=seasonality.xlab,
+  base.desc = "test series",
+  compare.desc = paste0("refit with ", plotting.forecast$method),
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="% over ts span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+accuracy(plotting.forecast, seis.h.test)
+gg_qqplot(plotting.model[,5])
+
+bptests <- data.frame(lag=integer(), `p-value`=numeric())
+for (i in 1:10){
+  bptests[nrow(bptests) + 1, ] <- c(i, Box.test(plotting.model[,5], lag = i, fitdf = 0, type = "Box-Pierce")$p.value)
+}
+bptests.plot <- 
+  ggplot(bptests, aes(lag, `p.value`), pch="o") + 
+    geom_point() + ylim(0,1) +
+    labs(title="Box-Pierce tests for lags 1 to 10") +
+    geom_hline(yintercept=0.05, linetype="dotted", color = "blue") +
+    scale_x_continuous(breaks=1:10)
+bptests.plot
+
+```
+
+
+```{r eval=FALSE, include=FALSE}
+gc()
+if (name == "MEM") {
+  proj_file <- 'proj.mems.RData'
+  save.image(paste0("/media/data/Documents/Uni/spatiotemp/villalobos/project/", proj_file))
+  remove(proj_file)
+}
+```

@@ -250,7 +250,6 @@ library(spec)
 pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2018-11-01T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
 #pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2019-05-03T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
 
-library(spec)
 pgram <- spec.pgram(build_ts(seis.h, start=as_datetime('2018-11-01T00:00:00'), end=as_datetime('2020-03-01T00:00:00')), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
 topfreq <- pgram$freq[order(pgram$spec, decreasing = T)][1:100]
 topseas <- 1/topfreq
