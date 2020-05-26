@@ -26,7 +26,7 @@ domain <- c(-7200,7200); pattern <- "MEM.*\\.csv"; name <- "MEM"; description <-
 ```
 
 
-```{r}
+```{r transformation}
 plot(seis.h, xaxt="n", type="l")
 axis.POSIXct(1, at=seq.POSIXt(from=seis.h.start, to=seis.h.end, by = "1 month"), format="%m-%y", cex=0.8)
 
@@ -43,8 +43,10 @@ gg_qqplot(log(seis.h.train)) +
         labs(title="Q-Q plot for log(training) dataset") + ylab("Sample quantiles")
 gg_qqplot(train.bc) + 
         labs(title="Q-Q plot for BoxCox(training) dataset") + ylab("Sample quantiles")
+```
 
 
+```{r acf-pacf}
 train.bc %>% ggtsdisplay(lag.max = 168*5)
 train.bc %>% diff() %>% ggtsdisplay(lag.max = 168*5)
 train.bc %>% diff(lag=24) %>% ggtsdisplay(lag.max = 168)
@@ -96,7 +98,7 @@ for (model in to_test) {
     residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
     print(plot_grid(residuals.acf, residuals.pacf, nrow=2))
     print(plot_forecast(plotting.forecast) + 
-      autolayer(BoxCox(seis.h.test, train.bc.lambda), series="Original"))
+      autolayer(seis.h.test, series="Original"))
     plots <- show_overlap_and_diff(
       seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
       base.desc = "original series",
@@ -120,7 +122,69 @@ for (model in to_test) {
 ```
 
 
-```{r}
+```{r arima on seasonality}
+autoplot(residuals+trend.s)
+residuals.bc.lambda <- BoxCox.lambda(residuals+trend.s)
+residuals.bc <- BoxCox(residuals+trend.s, residuals.bc.lambda)
+residuals.bc %>% ggtsdisplay(lag.max = 168*5)
+residuals.bc %>% diff() %>% ggtsdisplay(lag.max = 168*5)
+residuals.bc %>% diff(lag=24) %>% ggtsdisplay(lag.max = 168)
+residuals.bc %>% diff() %>% diff(lag=24) %>% ggtsdisplay(lag.max = 168)
+residuals.bc %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5)
+residuals.bc %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5) # arima (0,1,0)(0,1,1)[168]
+residuals.bc %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168) # arima (0,1,0)(0,1,1)[168]
+# acf cuts off after p=168, pacf shows peaks each 168
+residuals.bc %>% diff() %>% diff(lag=24) %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5)
+
+gg_qqplot(residuals) + 
+  labs(title=paste0("Q-Q plot for ", plotting.forecast$method, " residuals")) + ylab("Residuals quantiles")
+
+
+a <- Arima(residuals, order = c(1,0,0), seasonal = c(0,0,0), lambda=residuals.bc.lambda)
+afor <- forecast(a, h=168*18, lambda=residuals.bc.lambda)
+
+plotting.model <- a
+plotting.forecast <- afor
+
+autoplot(plotting.model) + xlab("Week")
+
+gg_qqplot(plotting.model$residuals) + 
+  labs(title=paste0("Q-Q plot for ", plotting.forecast$method, " residuals")) + ylab("Residuals quantiles")
+checkresiduals(plotting.model$residuals)
+Box.test(plotting.forecast$model$residuals, type="L")
+residuals.acf <- autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
+plot_grid(residuals.acf, residuals.pacf, nrow=2)
+
+plot_forecast(plotting.forecast) + 
+  autolayer(seis.h.test, series="Test") + 
+  autolayer(seis.h.train, series="Train")
+plots <- show_overlap_and_diff(
+  seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
+  base.desc = "train series",
+  compare.desc = paste0("refit with ", plotting.forecast$method),
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="% over ts span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+plots <- show_overlap_and_diff(
+  seis.h.test[1:length(plotting.forecast$mean)], plotting.forecast$mean, xlab=seasonality.xlab,
+  base.desc = "test series",
+  compare.desc = paste0("refit with ", plotting.forecast$method),
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="% over ts span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+accuracy(plotting.forecast, seis.h.test)
+
+```
+
+
+```{r auto arima}
 #fit <- auto.arima(seis.h.train, d=1, D=1, max.p=5, max.q=2, max.P=5, max.Q=2, max.order=10, trace = T, parallel = T)
 ```
 
@@ -133,18 +197,21 @@ seis.h.train.m <- msts(seis.h.train, c(24, 168))
 seis.mstl <- seis.h.train.m %>% mstl(s.window="periodic", lambda=train.bc.lambda) #c(15, 7))
 seis.mstl.fc <- forecast(seis.mstl, h=168*18, lambda=train.bc.lambda)
 
-autoplot(seis.mstl) + xlab("Week")
-plot(seis.mstl[,2], main="trend")
+plot(InvBoxCox(seis.mstl[,2], lambda=train.bc.lambda), main="trend")
 lines(trend.s, col="red")
-plot(rowSums(seis.mstl[,3:4]), main="seasonality",type="l")
+plot(InvBoxCox(rowSums(seis.mstl[,3:4]), lambda=train.bc.lambda), main="seasonality",type="l")
 lines(seasonality, col="red")
-plot(seis.mstl[,5],  main="residuals")
+plot(InvBoxCox(seis.mstl[,5], lambda=train.bc.lambda),  main="residuals")
 lines(residuals, col="red")
-gg_qqplot(seis.mstl[,5]) + 
-  labs(title=paste0("Q-Q plot for ", seis.mstl.fc$method, " residuals")) + ylab("Residuals quantiles") + xlab("Theoretical quantiles")
+
 
 plotting.model <- seis.mstl
 plotting.forecast <- seis.mstl.fc
+
+autoplot(plotting.model) + xlab("Week")
+
+gg_qqplot(plotting.model[,5]) + 
+  labs(title=paste0("Q-Q plot for ", seis.mstl.fc$method, " residuals")) + ylab("Residuals quantiles")
 checkresiduals(plotting.model[,5])
 Box.test(plotting.forecast$model$residuals, type="L")
 residuals.acf <- autoplot(acf(plotting.model[,5], na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
@@ -175,7 +242,6 @@ plots <- show_overlap_and_diff(
 )
 plot_grid(plots[[1]], plots[[2]], nrow = 2)
 accuracy(plotting.forecast, seis.h.test)
-gg_qqplot(plotting.model[,5])
 
 bptests <- data.frame(lag=integer(), `p-value`=numeric())
 for (i in 1:10){
@@ -192,11 +258,8 @@ bptests.plot
 ```
 
 
-```{r eval=FALSE, include=FALSE}
+```{r save RData, include=FALSE}
 gc()
-if (name == "MEM") {
-  proj_file <- 'proj.mems.RData'
-  save.image(paste0("/media/data/Documents/Uni/spatiotemp/villalobos/project/", proj_file))
-  remove(proj_file)
-}
+proj_file <- 'proj.mems.RData'
+save.image(proj_file)
 ```

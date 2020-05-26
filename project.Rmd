@@ -27,7 +27,7 @@ if (!exists("domain")) {
   domain <- c(-7200,7200); pattern <- "MEM.*\\.csv"; name <- "MEM"; description <- "Membach"; proj_file <- 'proj.mems.RData'
 }
 if (exists("proj_file")) {
-  #load(paste0("/media/data/Documents/Uni/spatiotemp/villalobos/project/", proj_file))
+  load(paste0("/media/data/Documents/Uni/spatiotemp/villalobos/project/", proj_file))
   # save.image(paste0("/media/data/Documents/Uni/spatiotemp/villalobos/project/", proj_file))
 }
 
@@ -142,6 +142,14 @@ seis.dst.fix <-
 
 seis.h <- merge(seis.h, seis.dst.fix, all=T)
 remove(seis.after, seis.before, seis.dst.fix)
+
+# invalid_values <- seis.h$mean_movement_s > 200
+# seis.h <-
+#   seis.h %>%
+#   mutate(mean_movement_s=replace(mean_movement_s, invalid_values, NA)) %>%
+#   drop_na()
+# remove(invalid_values)
+
 gc()
 ```
 
@@ -234,7 +242,7 @@ seis.h.start <- as_datetime('2018-10-29T00:00:00')
 seis.h.end <- as_datetime('2020-03-02T00:00:00') - seconds(1)
 seasonality.period <- 24
 seasonality.xlab <- "Days"
-seasonality.aggregate <- function(ds) na.aggregate(seis.h.ts, function(x) floor(x/14))
+seasonality.aggregate <- function(ds) na.aggregate(ds, function(x) floor(x/14))
 seasonality.period <- 168
 seasonality.xlab <- "Weeks"
 seasonality.aggregate <- function(ds) na.aggregate(ds, floor)
@@ -247,8 +255,8 @@ seis.train.end <- seis.test.split - seconds(1)
 seis.h.train <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.train.end, force_ms = T)
 
 seis.test.start <- seis.test.split
-seis.test.end <- as_datetime('2020-05-04T00:00:00') - seconds(1)
-seis.h.test <- build_ts(seis.h, periods = c(seasonality.period), start = seis.h.start, end = seis.test.end, force_ms = T)
+seis.test.end <- seis.test.start + days(7*18) - seconds(1)
+seis.h.test <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.end, force_ms = T)
 seis.h.test <- window(seis.h.test, start = c(end(seis.h.train)[1] + 1, 1))
 seis.test.length <- length(seis.h.test)
 ```
@@ -257,19 +265,22 @@ seis.test.length <- length(seis.h.test)
 
 ```{r periodgram}
 library(spec)
-pgram <- spec.pgram(seis.h.train, main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
+pgram <- spec.pgram(build_ts(seis.h, start = seis.train.start, end = seis.train.end), main="periodgram", detrend=F, demean=T, na.action=na.aggregate)
 topfreq <- pgram$freq[order(pgram$spec, decreasing = T)][1:100]
 topseas <- 1/topfreq
-topseas.h <- topseas/1
+topseas.h <- topseas/3600
 
 filter_freq <- (pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*2)) 
 top95pc <- pgram$spec[filter_freq]
 top95freq <- pgram$freq[filter_freq][order(top95pc, decreasing = T)]
 top95pc <- pgram$spec[filter_freq][order(top95pc, decreasing = T)]
+cat("SD ratio\n")
+(top95pc - mean(pgram$spec))/sd(pgram$spec)
 top95seas.s <- 1/top95freq
+cat("Raw frequency by unit\n")
 top95seas.s
-top95seas.h <- top95seas.s/1
-top95pc/sd(pgram$spec)
+top95seas.h <- top95seas.s/3600
+cat("Frequency by unit\n")
 top95seas.h
 
 ylims <- 10^par("usr")[3:4]
@@ -287,26 +298,26 @@ gc()
 
 
 ```{r plot data with (p)acf}
-seis.h.24 <- build_ts(seis.h, periods = c(24), start = seis.h.start, end = seis.h.end)
+seis.h.24 <- build_ts(seis.h.train, periods = c(24))
 seasonplot(seis.h.24, type="l", col=rainbow(7))
-legend("topleft", legend=weekdays(seis.h.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+legend("topleft", legend=weekdays(seis.train.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
 
 plot_grid(
-  autoplot(seis.h.ts, main = "Hourly seismic movement", xlab = seasonality.xlab, ylab = "mean movement (nm)"),
-  gghistogram(seis.h.ts, add.normal = T) + xlab("mean movement (nm)"),
+  autoplot(seis.h.train, main = "Hourly seismic movement", xlab = seasonality.xlab, ylab = "mean movement (nm)"),
+  gghistogram(seis.h.train, add.normal = T) + xlab("mean movement (nm)"),
   nrow = 2)
 plot_grid(
-  autoplot(acf(seis.h.ts, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
-  autoplot(pacf(seis.h.ts, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
+  autoplot(acf(seis.h.train, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
+  autoplot(pacf(seis.h.train, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
   nrow = 2)
 
 
 ```
 Once notice the composition is additive (the fluctuations does not seem to grow with the trend)
 ```{r decompose}
-dec.addi <- decompose(seasonality.aggregate(seis.h.ts))
+dec.addi <- decompose(seasonality.aggregate(seis.h.train))
 autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period))
-dec.multi <- decompose(log(seasonality.aggregate(seis.h.ts)))
+dec.multi <- decompose(log(seasonality.aggregate(seis.h.train)))
 autoplot(dec.multi) + labs(title="Decomposition of multiplicative time series (log-scale additive)", subtitle = paste0("Seasonality ", seasonality.period))
 plot_grid(
   autoplot(acf(dec.addi$random, na.action=na.omit, plot=F)) + scale_x_continuous(),
@@ -323,7 +334,7 @@ We now extract the trend using a linear filter with smoothing parameter $p$ equa
 ```{r linear trend}
 p <- floor(seasonality.period/2)
 weights <- rep(1/(2*p+1), times=2*p+1)
-trend <- stats::filter(seasonality.aggregate(seis.h.ts), sides=2, filter = weights)
+trend <- stats::filter(seasonality.aggregate(seis.h.train), sides=2, filter = weights)
 ```
 
 
@@ -342,7 +353,8 @@ show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, 
   rmse <- sqrt(mse)
   R2 <- 1-(sum((diff)^2, na.rm = T)/sum((base-mean(base))^2, na.rm = T))
   errorstring <- paste0("MSE=", mse, "    MAE=", mae, "    RMSE=", rmse, "    R2=", R2)
-  print(errorstring)
+  cat("Errors: ", compare.desc, "\n")
+  cat("\t","MSE=", mse, "    MAE=", mae, "    RMSE=", rmse, "    R2=", R2, "\n")
 
 
   diff_plot <-
@@ -375,7 +387,7 @@ Then we use a filter able also to capture some seasonal effect so we will be abl
 ```{r trend MA}
 f <- seasonality.period
 weights.s <- c(0.5, rep(1,f-1), 0.5)/f
-trend.s <- stats::filter(seasonality.aggregate(seis.h.ts), side=2, filter=weights.s)
+trend.s <- stats::filter(seasonality.aggregate(seis.h.train), side=2, filter=weights.s)
 
 plots <- show_overlap_and_diff(
   dec.addi$trend, trend.s, xlab=seasonality.xlab,
@@ -396,7 +408,7 @@ and they match (with some error of course) with the ones found with the decompos
 Finally we want to prove we can retrieve seasonality, in order to do so we can compute the average seasonality starting from the detrended series: to do so we put the time series into a matrix and we transform this matrix so each column contains elements of the same period and finally, we compute the mean of each column. We will check this with the element figure of the object decomposition i.e. the estimated seasonal figure not repeated for all the time series. 
 
 ```{r trend figure}
-detrended <- seasonality.aggregate(seis.h.ts)-trend.s
+detrended <- seasonality.aggregate(seis.h.train)-trend.s
 detrended <- window(detrended, end = c(end(detrended)[1], seasonality.period), extend=T)
 matrix <- t(matrix(data = detrended, nrow = seasonality.period))
 seasonality.figure <- as.ts(colMeans(matrix, na.rm = T))
@@ -422,7 +434,7 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 ```
 
 ```{r residuals}
-residuals <- seasonality.aggregate(seis.h.ts) - trend.s - seasonality
+residuals <- seasonality.aggregate(seis.h.train) - trend.s - seasonality
 
 plots <- show_overlap_and_diff(
   dec.addi$random, residuals, xlab=seasonality.xlab,
@@ -448,9 +460,9 @@ In fact we are able to reconstruct the original series, with of course some miss
 ts <- residuals+trend.s+seasonality
 
 plots <- show_overlap_and_diff(
-  seis.h.ts, ts, xlab=seasonality.xlab,
+  seis.h.train, ts, xlab=seasonality.xlab,
   base.desc = "original series",
-  compare.desc = "reconstructed series",
+  compare.desc = "reconstructed serie (manual)",
   overlap.ylab = "Mean hourly movement (nm)",
   diff.title = "Difference between ts",
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
@@ -459,9 +471,9 @@ plots <- show_overlap_and_diff(
 plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 plots <- show_overlap_and_diff(
-  seis.h.ts, dec.addi$trend+dec.addi$seasonal+dec.addi$random, xlab=seasonality.xlab,
+  seis.h.train, dec.addi$trend+dec.addi$seasonal+dec.addi$random, xlab=seasonality.xlab,
   base.desc = "original series",
-  compare.desc = "reconstructed series",
+  compare.desc = "reconstructed serie (decompose additive)",
   overlap.ylab = "Mean hourly movement (nm)",
   diff.title = "Difference between ts",
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
@@ -503,7 +515,7 @@ trend_season <- function(ts.in, period) {
   return(season)
 }
 
-aggregated <- seasonality.aggregate(seis.h.ts)
+aggregated <- seasonality.aggregate(seis.h.train)
 season.24 <- trend_season(aggregated, 24)
 season.168 <- trend_season(aggregated-season.24$seasonal, 168)
 
