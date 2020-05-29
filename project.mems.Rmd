@@ -1,7 +1,6 @@
 ---
 title: "Project Membach"
 author: "Marco Ciotola"
-date: "16/05/2020"
 output:
   pdf_document:
     keep_tex: yes
@@ -26,27 +25,7 @@ domain <- c(-7200,7200); pattern <- "MEM.*\\.csv"; name <- "MEM"; description <-
 ```
 
 
-```{r transformation}
-plot(seis.h, xaxt="n", type="l")
-axis.POSIXct(1, at=seq.POSIXt(from=seis.h.start, to=seis.h.end, by = "1 month"), format="%m-%y", cex=0.8)
-
-hist(seis.h.train)
-plot(log(seis.h.train))
-hist(log(seis.h.train))
-train.bc.lambda <- BoxCox.lambda(seis.h.train)
-train.bc <- BoxCox(seis.h.train, train.bc.lambda)
-plot(train.bc)
-gghistogram(train.bc, add.normal = T)
-gg_qqplot(seis.h.train) + 
-        labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles")
-gg_qqplot(log(seis.h.train)) + 
-        labs(title="Q-Q plot for log(training) dataset") + ylab("Sample quantiles")
-gg_qqplot(train.bc) + 
-        labs(title="Q-Q plot for BoxCox(training) dataset") + ylab("Sample quantiles")
-```
-
-
-```{r acf-pacf}
+```{r bc acf-pacf}
 train.bc %>% ggtsdisplay(lag.max = 168*5)
 train.bc %>% diff() %>% ggtsdisplay(lag.max = 168*5)
 train.bc %>% diff(lag=24) %>% ggtsdisplay(lag.max = 168)
@@ -260,6 +239,5 @@ bptests.plot
 
 ```{r save RData, include=FALSE}
 gc()
-proj_file <- 'proj.mems.RData'
 save.image(proj_file)
 ```

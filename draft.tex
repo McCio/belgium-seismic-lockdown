@@ -1,0 +1,285 @@
+\documentclass[12pt]{article}
+
+% BY MINE REPORTS
+\usepackage{fancyhdr}
+\usepackage{lastpage} % last page ref
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{scrextend}
+\usepackage{enumitem}
+\usepackage{caption} % for image/tables/... captions
+\usepackage{fancyvrb} % for centered verbatim
+%\usepackage{hyperref} % for links in refs
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage[round, sort, numbers]{natbib}
+\bibliographystyle{unsrtnat}
+% /BY MINE REPORTS
+
+% BY VARIN
+\usepackage[sc]{mathpazo}
+\usepackage{amsthm,amsmath,amssymb}
+\usepackage{titlesec}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+\usepackage{breakurl}
+% /BY VARIN
+
+% BY MINE REPORTS
+\renewcommand{\labelenumii}{\theenumi\theenumii.}
+\renewcommand{\theenumii}{.\arabic{enumii}}
+\renewcommand{\labelenumiii}{\theenumi\theenumii\theenumiii.}
+\renewcommand{\theenumiii}{.\arabic{enumiii}}
+
+\newtheorem*{theorem}{Theorem}
+\newtheorem*{proposition}{Proposition}
+
+\pagestyle{fancy}
+\fancyhf{}
+% /BY MINE REPORTS
+
+% FOR KNITR CHILD
+%\usepackage[]{graphicx} %% used before
+\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+	\ifdim\Gin@nat@width>\linewidth
+	\linewidth
+	\else
+	\Gin@nat@width
+	\fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+\let\hlipl\hlkwb
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+	\def\at@end@of@kframe{}%
+	\ifinner\ifhmode%
+	\def\at@end@of@kframe{\end{minipage}}%
+\begin{minipage}{\columnwidth}%
+	\fi\fi%
+	\def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+		\colorbox{shadecolor}{##1}\hskip-\fboxsep
+		% There is no \\@totalrightmargin, so:
+		\hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+	\MakeFramed {\advance\hsize-\width
+		\@totalleftmargin\z@ \linewidth\hsize
+		\@setminipage}}%
+{\par\unskip\endMakeFramed%
+	\at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% / FOR KNITR CHILD
+
+\renewcommand{\theequation}{\roman{equation}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\p}{p}
+\DeclareMathOperator*{\cov}{cov}
+\DeclareMathOperator*{\var}{var}
+\DeclareMathOperator*{\diag}{diag}
+\DeclareMathOperator{\Bernoulli}{Bernoulli}
+\DeclareMathOperator{\given}{\vert}
+\newcommand*\mean[1]{\overline{#1}}
+\DeclareMathOperator*{\simf}{sim}
+
+\title{Seismic Time Series Analysis\\Statistics for Spatio-Temporal Data\\\textit{-- project draft --}}
+\author{Marco Ciotola, 848222}
+\date{\today}
+
+
+\begin{document}
+\pagenumbering{gobble}
+\maketitle
+\begin{figure}[t!]
+	\begin{center}
+		\includegraphics[width=100px]{ca_foscari_logo.png}
+	\end{center}
+\end{figure}
+\vfill Prof. Isadora Antoniano Villalobos - CM0477
+\hfill A.Y. 2019/2020
+\newpage
+\tableofcontents \clearpage
+\fancyfoot[RO,LE]{Page \thepage \hspace{1pt} of \pageref{LastPage}}
+\pagenumbering{arabic}
+% /BY MINE REPORTS
+
+% BY VARIN
+%\setlength{\parindent}{0pt}
+% /BY VARIN
+
+
+\section{Introduction}
+
+\paragraph{Motivation}
+Thanks to the recent coronavirus outbreak worldwide, we currently have data about many different phoenomena from periods with standard human activity, and from a period with reduced human activity.
+
+Ispired by an article published during the initial phases of the Belgium-wide lockdown \cite{NatureCoronavirusSeismic}, we want to assess whether the lockdown period can be correlated with a visible change in seismic activity.
+It is important to notice that some industrial events, such as mine explosions, are already mapped by seismologic institutions since they interfere with seismic surveys \cite{OtherSeismicEvents}, sometimes comparable with natural seismic events, depending on the distance from the seismograph.
+
+
+\paragraph{Data source and description}
+The Royal Observatory of Belgium (ROB) gathers and publishes \cite{RoyalDataPolicy,Data20200402} data about vertical ground displacement from 9 stations through the country, linking them to seismic events whenever possible \cite{DataEvents20200402}. They also offer a data visualization tool for the same data \cite{DataVisualization20200402}.
+
+The vertical ground displacement is represented in by the minimum and maximum displacement of the ground in the vertical axis, with $nm$ as unit of measure. This can easily be transformed in total ground displacement for that second by their difference.
+For each day, a pair per second is available (86400 per day, around 30 million per year).
+
+ROB collects data from 9 stations. Of those, the following 6 have interesting positions, related to possible correlations with human activity:
+\begin{itemize}
+	\item \textbf{Uccle}, \textbf{Sart-Tilman}, and \textbf{Ében-Émael} are near a city (Bruxelles, Liege, and Maastricht).
+	\item \textbf{Ostenda} This station is near the city of Ostenda, that borders with the sea.
+	\item \textbf{Membach} and \textbf{Dourbes} are near a natural park.
+\end{itemize}
+
+Data collected from near a city and from near a natural park could be selected, in order to compare possible seasonality results and differences from before and after the lockdown. %Also data from \textbf{Ostenda} station could be interesting, given the possible sea influence.
+Considered these factors, we selected the \textbf{Uccle} and \textbf{Membach} stations.
+
+It is important to notice that the \textit{day}ly data in each file is considered in UTC time, an optimal choice to publish data in a machine-readable way, even if this could cause some issues while interpreting the results.
+
+\subsection{Data cleanup and transformation}
+\paragraph{Data gathering and cleanup}
+The data is provided with a CSV per day, with only two columns related to the min-max pair \cite{Data20200402}. This causes two problems:
+\begin{enumerate}
+	\item Before merging different days, we need to add a column with the complete datetime for each row
+	\item Days with some \texttt{NA} values cannot skip rows, so we will find placeholder values that indicate them $(\min, \max) \in \{(0,0), (-1,1)\}$
+\end{enumerate}
+
+Data from each station have different domains, as distinct equipment can register a specific amplitude of the seismic movements. In fact, we found some values outside the domains, transformed in \texttt{NA}.
+
+In particular, we find that out of $\approx50$ million seconds, from 27-10-2018 to 28-05-2020, only 0.67\% (Uccle) and 0.37\% (Membach) have invalid values. We will see later how they are distributed for each station.
+
+% Uccle, Bruxelles (UCCS station)
+% Domain values: -350000 to 350000 nm
+% Data from 2018-10-27 00:00:00 to 2020-05-29 00:12:07
+% Removing 7 values out of domain, 28169 explicit NA
+% 49779920 present values, 334345 missing points ( 99.33 % / 0.67 % )
+
+% Membach (MEM station)
+% Domain values: -7200 to 7200 nm
+% Data from 2018-10-27 00:00:00 to 2020-05-29 00:09:55
+% Removing 8 values out of domain, 7018 explicit NA
+% 49929756 present values, 184421 missing points ( 99.63 % / 0.37 % )
+
+\paragraph{Data aggregation and initial transformation}
+Since we are not interested in second-precise analysis, and it would be computationally expensive to deal with the whole dataset, we are going to aggregate data by hour. The aggregation will get us around 14 thousand points, that can still result in interpretable models.
+
+While performing this operation, we should consider the correct timezone: any seasonal analysis dealing with UTC data would be out of phase between the half-year when Belgium follows the UTC+01 timezone, and the half-year when it follows the UTC+02 timezone. With the help of the \texttt{lubridate} R package we converted to the actual timezones, and then we kept the actual objects without being timezone explicit, because all the methods we are going to use are smart enough to work on the UTC conversion of datetimes. This transformation made it possible to have, for example, the time 6:00 in the timeseries to represent the local time in Belgium (\textit{Europe/Bruxelles}), without being influenced by the actual timezone on that specific day.
+
+The aggregation was performed considering the mean max-min difference, for the following reasons:
+\begin{itemize}
+	\item When an hour contains some missing seconds, these do not heavily affect the aggregation result, in contrast with summing the differences
+	\item Seismic events, such as quakes and mine explosions, normally last some minutes at most, and will affect the result only slightly, rather than keeping the hourly maximum
+	\item Normally, maximum values in defined period of times do not follow the Normal distribution, while some models that we are going to use assume the data follow a Normal distribution
+\end{itemize}
+
+\section{Analysis and decomposition}
+\paragraph{Missing values analysis}
+
+% Uccle, Bruxelles (UCCS station)
+% Domain values: -350000 to 350000 nm
+% Data from 2018-10-27 00:00:00 to 2020-05-29 00:12:07
+% Removing 7 values out of domain, 28169 explicit NA
+% 49779920 present values, 334345 missing points ( 99.33 % / 0.67 % )
+% 13831 present values, 90 missing points (99.35% / 0.65%)
+
+% Membach (MEM station)
+% Domain values: -7200 to 7200 nm
+% Data from 2018-10-27 00:00:00 to 2020-05-29 00:09:55
+% Removing 8 values out of domain, 7018 explicit NA
+% 49929756 present values, 184421 missing points ( 99.63 % / 0.37 % )
+% 13872 present values, 49 missing points (99.65% / 0.35%)
+
+After aggregating by hour, the percentages of missing values remain quite stable. As can be seen from figures \ref{missing-values-seconds:uccs} and \ref{missing-values-seconds:mems}, in both stations missing values are grouped in few consecutive periods.
+To deal with them when R methods need complete timeseries, we will define different completion strategies depending on the seasonality we will be studying, always based on the R function \texttt{na.aggregate}.
+
+\begin{figure}
+	\caption{Missing values representation}
+	\label{missing-values-seconds}
+	\begin{subfigure}{.5\linewidth}
+		\caption{Uccle station}
+		\label{missing-values-seconds:uccs}
+		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/missing values hour analysis-1.pdf}
+	\end{subfigure}
+	\begin{subfigure}{.5\linewidth}
+		\caption{Membach station}
+		\label{missing-values-seconds:mems}
+		\includegraphics[width=\linewidth]{project.mems_files/figure-latex/missing values hour analysis-1.pdf}
+	\end{subfigure}
+\end{figure}
+
+In particular, after a visual analysis after decomposition, we can suppose the 90 hours gap from the Uccle station is related to some changes to the seismic equipment, that resulted in slightly more precise measurements.
+
+
+\paragraph{Dataset division}
+As best practices suggest, we are going to divide the dataset into training and testing datasets. 
+Since one of our objectives is to assess any significant difference from before and after the Belgium lockdown (on March, 14$^{th}$ the `soft' lockdown, while on March, 18$^{th}$ the complete lockdown)
+
+
+
+
+
+\paragraph*{Hypotesis of analysis}
+
+\begin{enumerate}
+	\item Download data from start of March 2019 to present day.
+	\item Aggregate the data in slots of 30 minutes or 1 hour, keeping the maximum ground displacements in both negative and positive directions to maintain the same variables meaning.
+	\item Compute the total ground displacement for each result point.
+	\item Verify that we have a stationary time series (we expect that for the meaning that it brings: ground is not moving up or down).
+	\item Extract through a linear filter (probably MA) different seasonalities and residuals.
+\end{enumerate}
+
+The extraction of seasonalities is the focus point of this work: as \cite{NatureCoronavirusSeismic} seems to conclude, there is a clear weekly seasonality in at least the \textbf{Uccle} data. We should test against different seasonalities through the stations, extracting more at once if the residuals suggest their presence.
+
+Fitted models with these seasonalities, only from data before the Belgium lockdowns (on March, 14th the "soft" lockdown, while on March, 18th the complete lockdown), should let us forecast data for after the lockdown and test for statistical difference.
+
+Also, comparison between models and seasonalities from chosen stations could be done, to assess any statistical difference between apparent human impact registered from places with different standard human activity.
+
+Eventually, some attention could be given to events registered through the analysed time.
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+\bibliography{project}
+
+\end{document}

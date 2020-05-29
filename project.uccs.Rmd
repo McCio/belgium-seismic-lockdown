@@ -387,11 +387,8 @@ bptests.plot
 ```
 
 
-```{r eval=FALSE, include=FALSE}
+
+```{r save RData, include=FALSE}
 gc()
-if (name == "MEM") {
-  proj_file <- 'proj.mems.RData'
-  save.image(paste0("/media/data/Documents/Uni/spatiotemp/villalobos/project/", proj_file))
-  remove(proj_file)
-}
+save.image(proj_file)
 ```
