@@ -22,9 +22,9 @@ library(tsbox) # https://cran.r-project.org/web/packages/tsbox/vignettes/tsbox.h
 print_dec <- function(x, decimals=2) trimws(format(round(x, decimals), nsmall=decimals))
 
 setwd("/media/data/Documents/Uni/spatiotemp/villalobos/project/")
-if (exists("proj_file")) {
-  load(paste0("/media/data/Documents/Uni/spatiotemp/villalobos/project/", proj_file))
-  # save.image(paste0("/media/data/Documents/Uni/spatiotemp/villalobos/project/", proj_file))
+if (exists("proj_file") & file.exists(proj_file)) {
+  load(proj_file)
+  # save.image(proj_file)
 }
 
 gg_qqplot <- function(dataset) {
@@ -295,17 +295,17 @@ gg_qqplot(train.bc) +
 
 ## Periodgram
 ```{r periodgram}
-pgram <- spec.pgram(build_ts(seis.h, start = seis.train.start, end = seis.train.end), main="Periodgram", detrend=F, demean=T, na.action=na.aggregate, plot=F, xlim=c(0,1/3600))
+min_h_seasonality <- 24
+min_h_seasonality <- 2
+pgram <- spec.pgram(stats::filter(build_ts(seis.h, start = seis.train.start, end = seis.train.end), side=2, filter=c(0.5, rep(1,min_h_seasonality-1), 0.5)/min_h_seasonality),
+#`pgram <- spec.pgram(build_ts(seis.h, start = seis.train.start, end = seis.train.end),
+                    detrend=F, demean=T, na.action=na.aggregate, plot=F)
 pgram.data <- data.frame(freq=pgram$freq, spec=pgram$spec)
 ggplot(pgram.data) +
   geom_line(aes(freq, log(spec))) +
   xlab("frequency") + ylab("log(spectrum)") +
-  labs(title = "Periodgram", caption = paste0("bandwidth = ", pgram$bandwidth, "\tdf = ", pgram$df)) ->
+  labs(title = "Periodgram", caption = paste0("bandwidth = ", pgram$bandwidth, "    df = ", pgram$df)) ->
   periodgram
-
-topfreq <- pgram$freq[order(pgram$spec, decreasing = T)][1:100]
-topseas <- 1/topfreq
-topseas.h <- topseas/3600
 
 start_ratio <- 2
 filter_freq <- (pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*start_ratio)) 
@@ -324,8 +324,8 @@ top95seas.h
 ratio.color <- function(x) ifelse(x >= (mean(pgram$spec) + sd(pgram$spec)*3), "red", ifelse(x >= (mean(pgram$spec) + sd(pgram$spec)*2), "blue", ifelse(x >= (mean(pgram$spec) + sd(pgram$spec)*1), "darkgreen", "orange")))
 shown_labels <- 4
 periodgram +
-  scale_x_continuous(sec.axis = sec_axis(~1/./3600, breaks=c(1, 6*c(1,2,4,4*7)), labels = as.integer, name="hours")) +
-  scale_y_continuous(sec.axis = sec_axis(~exp(.), breaks=mean(pgram$spec) + sd(pgram$spec) * c(1:3), labels=c("1", "2", "3")[1:3], name="spectrum/sd ratio")) +
+  scale_x_continuous(sec.axis = sec_axis(~1/./3600, breaks=c(1, 3, 2*c(1,2,3,4,6,12), 24*7), labels = as.integer, name="hours")) +
+  scale_y_continuous(sec.axis = sec_axis(~exp(.), breaks=mean(pgram$spec) + sd(pgram$spec) * c(1,3), labels=c("1", "2", "3")[c(1,3)], name="spectrum/sd ratio")) +
   geom_hline(yintercept=log(mean(pgram$spec) + sd(pgram$spec) * c(1:3)), linetype="dotted", color = ratio.color(mean(pgram$spec) + sd(pgram$spec) * c(1:3))) +
   geom_point(data=data.frame(freq=top95freq, spec=top95pc), aes(freq, log(spec), color=ratio.color(spec)), shape="o", size=4, show.legend = F) +
   geom_label_repel(data=data.frame(freq=top95freq, spec=top95pc)[1:shown_labels,], aes(freq, log(spec), label=round(1/freq/3600), color=ratio.color(spec)), segment.color="grey", show.legend=F) +
@@ -559,7 +559,7 @@ trend_season <- function(ts.in, period) {
   season$trend <- trend.s
   return(season)
 }
-
+  
 aggregated <- seasonality.aggregate(seis.h.train)
 season.24 <- trend_season(aggregated, 24)
 season.168 <- trend_season(aggregated-season.24$seasonal, 168)

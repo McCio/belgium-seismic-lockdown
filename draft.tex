@@ -22,7 +22,7 @@
 \usepackage{titlesec}
 \usepackage[T1]{fontenc}
 \usepackage{geometry}
-\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\geometry{a4paper,verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
 \setcounter{secnumdepth}{2}
 \setcounter{tocdepth}{2}
 \usepackage{url}
@@ -144,14 +144,13 @@
 
 \section{Introduction}
 
-\paragraph{Motivation}
+\subsubsection{Motivation and objective}
 Thanks to the recent coronavirus outbreak worldwide, we currently have data about many different phoenomena from periods with standard human activity, and from a period with reduced human activity.
 
-Ispired by an article published during the initial phases of the Belgium-wide lockdown \cite{NatureCoronavirusSeismic}, we want to assess whether the lockdown period can be correlated with a visible change in seismic activity.
-It is important to notice that some industrial events, such as mine explosions, are already mapped by seismologic institutions since they interfere with seismic surveys \cite{OtherSeismicEvents}, sometimes comparable with natural seismic events, depending on the distance from the seismograph.
+Inspired by an article published during the initial phases of the Belgium-wide lockdown \cite{NatureCoronavirusSeismic}, we want to assess whether the lockdown period can be correlated with a visible change in seismic activity.
+It is important to notice that some industrial events, such as mine explosions, are already mapped by seismologic institutions since they interfere with seismic surveys \cite{OtherSeismicEvents}. Such events are sometimes comparable with natural seismic events, depending on the distance from the seismograph.
 
-
-\paragraph{Data source and description}
+\subsubsection{Data source and description}
 The Royal Observatory of Belgium (ROB) gathers and publishes \cite{RoyalDataPolicy,Data20200402} data about vertical ground displacement from 9 stations through the country, linking them to seismic events whenever possible \cite{DataEvents20200402}. They also offer a data visualization tool for the same data \cite{DataVisualization20200402}.
 
 The vertical ground displacement is represented in by the minimum and maximum displacement of the ground in the vertical axis, with $nm$ as unit of measure. This can easily be transformed in total ground displacement for that second by their difference.
@@ -169,8 +168,8 @@ Considered these factors, we selected the \textbf{Uccle} and \textbf{Membach} st
 
 It is important to notice that the \textit{day}ly data in each file is considered in UTC time, an optimal choice to publish data in a machine-readable way, even if this could cause some issues while interpreting the results.
 
-\subsection{Data cleanup and transformation}
-\paragraph{Data gathering and cleanup}
+\subsection{Data cleanup and transformation}\label{sec:cleanup-transform}
+\subsubsection{Data gathering and cleanup}
 The data is provided with a CSV per day, with only two columns related to the min-max pair \cite{Data20200402}. This causes two problems:
 \begin{enumerate}
 	\item Before merging different days, we need to add a column with the complete datetime for each row
@@ -193,7 +192,7 @@ In particular, we find that out of $\approx50$ million seconds, from 27-10-2018 
 % Removing 8 values out of domain, 7018 explicit NA
 % 49929756 present values, 184421 missing points ( 99.63 % / 0.37 % )
 
-\paragraph{Data aggregation and initial transformation}
+\subsubsection{Data aggregation and initial transformation}
 Since we are not interested in second-precise analysis, and it would be computationally expensive to deal with the whole dataset, we are going to aggregate data by hour. The aggregation will get us around 14 thousand points, that can still result in interpretable models.
 
 While performing this operation, we should consider the correct timezone: any seasonal analysis dealing with UTC data would be out of phase between the half-year when Belgium follows the UTC+01 timezone, and the half-year when it follows the UTC+02 timezone. With the help of the \texttt{lubridate} R package we converted to the actual timezones, and then we kept the actual objects without being timezone explicit, because all the methods we are going to use are smart enough to work on the UTC conversion of datetimes. This transformation made it possible to have, for example, the time 6:00 in the timeseries to represent the local time in Belgium (\textit{Europe/Bruxelles}), without being influenced by the actual timezone on that specific day.
@@ -206,7 +205,7 @@ The aggregation was performed considering the mean max-min difference, for the f
 \end{itemize}
 
 \section{Analysis and decomposition}
-\paragraph{Missing values analysis}
+\subsubsection{Missing values analysis}
 
 % Uccle, Bruxelles (UCCS station)
 % Domain values: -350000 to 350000 nm
@@ -222,36 +221,172 @@ The aggregation was performed considering the mean max-min difference, for the f
 % 49929756 present values, 184421 missing points ( 99.63 % / 0.37 % )
 % 13872 present values, 49 missing points (99.65% / 0.35%)
 
-After aggregating by hour, the percentages of missing values remain quite stable. As can be seen from figures \ref{missing-values-seconds:uccs} and \ref{missing-values-seconds:mems}, in both stations missing values are grouped in few consecutive periods.
+After aggregating by hour, the percentages of missing values remain quite stable. As can be seen from \figurename{s} \ref{missing-values-seconds:uccs} and \ref{missing-values-seconds:mems}, both stations missing values are grouped in few consecutive periods.
 To deal with them when R methods need complete timeseries, we will define different completion strategies depending on the seasonality we will be studying, always based on the R function \texttt{na.aggregate}.
-
-\begin{figure}
-	\caption{Missing values representation}
-	\label{missing-values-seconds}
-	\begin{subfigure}{.5\linewidth}
-		\caption{Uccle station}
-		\label{missing-values-seconds:uccs}
-		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/missing values hour analysis-1.pdf}
-	\end{subfigure}
-	\begin{subfigure}{.5\linewidth}
-		\caption{Membach station}
-		\label{missing-values-seconds:mems}
-		\includegraphics[width=\linewidth]{project.mems_files/figure-latex/missing values hour analysis-1.pdf}
-	\end{subfigure}
-\end{figure}
 
 In particular, after a visual analysis after decomposition, we can suppose the 90 hours gap from the Uccle station is related to some changes to the seismic equipment, that resulted in slightly more precise measurements.
 
+\begin{figure}[h]
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/missing values hour analysis-1.pdf}
+		\caption{Uccle station}
+		\label{missing-values-seconds:uccs}
+	\end{subfigure}
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.mems_files/figure-latex/missing values hour analysis-1.pdf}
+		\caption{Membach station}
+		\label{missing-values-seconds:mems}
+	\end{subfigure}
+	\caption{Missing values representation}
+	\label{missing-values-seconds}
+\end{figure}
 
-\paragraph{Dataset division}
-As best practices suggest, we are going to divide the dataset into training and testing datasets. 
-Since one of our objectives is to assess any significant difference from before and after the Belgium lockdown (on March, 14$^{th}$ the `soft' lockdown, while on March, 18$^{th}$ the complete lockdown)
+\subsubsection{Seasonality assumptions}
+The already cited article \cite{NatureCoronavirusSeismic} suggests the existence of a weekly seasonality. Looking at the data it seems confirmed, in addition to a daily seasonality.
+
+Since our main focus is on the seasonalities themselves, in order to prevent assumptions based on the objective, so that searching for correlation with human activity becomes imposing human-based seasonality periods, we will use an analytical method to extract seasonalities that the data itself suggests to us. Still, we recognize that the already performed transformations impose an human-based time alteration to the data itself (Section \ref{sec:cleanup-transform}).
+
+The method we are going to apply is based on the Fourier Transform, and generates a \textit{periodgram} highlighting the most interesting frequencies that might correspond to a seasonality component.
+Applying the FT for any frequency, we transform our 1-dimensional data into a 2-dimensional data mapped around a circle. Then, we can sum all the resulting vectors (that are our new data points) to obtain a vector for each frequency, whose absolute value represents the power level of the same frequency. An high power level represents a significant periodicity on that frequency in our original data.
+
+A common operation to increase the difference between significant and non-significant periodicities is to apply a MA smoothing filter with a smaller window than the interesting ones. We will use such a filter with $f=2$.
+
+On this note we must specify that, when a significant periodicity is found, it influences smaller periodicities given by $f*\{2,3,\dots\}$ the significant frequency. Also, if any periodicity is found that is longer than the original dataset, it must be considered as a \textit{coincidence}, rather than a surprising serendipity.
+
+Since we will be applying this method on the dataset indexed by a datetime object, which uses the second as the unit, the transformation of frequency $f$ into hourly periodicity $p$ is obtained by $p=(1/f)/3600$.
+We can analyse the resulting periodgrams for Uccle and Membach stations in \figurename{s} \ref{fig:periodgram:uccs} and \ref{fig:periodgram:mems}.
+
+\begin{figure}[h]
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/periodgram-1"}
+		\caption{Uccle station}
+		\label{fig:periodgram:uccs}
+	\end{subfigure}
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/periodgram-1"}
+		\caption{Membach station}
+		\label{fig:periodgram:mems}
+	\end{subfigure}
+	\caption{Periodgram results}
+	\label{fig:periodgram}
+\end{figure}
+
+Both highlight multiple 24-hour periodicities. This is given by approximation factors, since we round the divisions result to the nearest natural number. It also highlights that using a single 24-hour seasonality could leave some information on the remaining components. Still, in both stations it is the most significant periodicity.
+
+Both stations highlight a significant 168-hour (1-week) periodicity, that also confirms our initial assumptions.
+
+Both stations show a possibly significant 12-hour seasonality, but since it corresponds to double the frequency of the 24-hour seasonality, we can safely ignore it.
+
+In particular from the Uccle station, we can see a great number of spikes, that will probably undermine our models.
+
+% From the Membach station, we can see an anomalous spike at a 6-hour periodicity. 
+
+\subsubsection{Dataset division}
+As best practices suggest, we are going to divide the dataset into training and testing datasets with a ratio around $85\%/15\% - 75\%/25\%$.
+Since one of our objectives is to assess any significant difference from before and after the Belgium lockdown (on March, $14^{th}$ the \textit{soft} lockdown, while on March, $18^{th}$ the complete lockdown), we selected data from the start of our timeseries until 20-01-2020 (64 weeks $\approx 82\%$) as training, while the test follows and ends on 27-04-2020 (14 weeks $\approx 18\%$).
+
+This initial division demostrated to be computationally heavy while fitting some models with weekly seasonality, and we noticed a possible yearly seasonality on Uccle data (\figurename~\ref{fig:whole-data-decomposition}). Even if it is not demonstrable given the short period our data comes from, applying a 24-hour MA smoothing filter on the whole dataset and then producing the periodgram as previously done, it suggests a 8748-hours significant periodicity (364.5 days).
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\linewidth]{"project.uccs_files/figure-latex/whole data plot-2"}
+	\caption{Whole Uccle data decomposition}{\footnotesize Weeks 10 and 62 include January, $1^{st}~2019/2020$}
+	\label{fig:whole-data-decomposition}
+\end{figure}
+
+Given those issues, we choose the training/testing sets to hold 52/18 weeks: this is the greater train-to-test ratio we deem usable ($\approx 75\%/25\%$), while maintaining computational feasibility, and we hope it will render the possible yearly seasonality less intrusive.
+
+
+\subsubsection{Decomposition}
+In order to decompose our dataset into trend and seasonality(-ties) components, we followed these steps:
+\begin{enumerate}
+	\item Apply a smoothing filter to extract the trend component
+	\item Remove the trend from the dataset and extract the seasonal figure using the local mean method
+	\item Remove the trend and the seasonal components to obtain the residuals
+\end{enumerate}
+While doing so, we tested different smoothing filters: simple filter (p=seasonality), Spencer's 15-point filter and MA smoothing filter (f=seasonality). Since they do not produce particularly different seasonalities, we choose to keep the results obtained by applying the MA smoothing filter, for its significance in terms of seasonally adjusted data.
+
+Since the periodgrams suggested the presence of two significative periodicities, we also tested the extraction of both corresponding seasonalities:
+\begin{enumerate}
+	\item Apply the MA smoothing filter (f=24) on the dataset to extract the trend component
+	\item Remove the trend from the dataset and extract the 24-hour seasonal figure using the local mean method
+	\item Remove the 24-hour seasonal components to obtain a deseasoned dataset
+	\item Apply the MA smoothing filter (f=168) on the deseasoned dataset to extract the updated trend component
+	\item Remove the trend from the already deseasoned dataset and extract the 168-hour seasonal figure using the local mean method
+	\item Repeat steps 3-5 steps alternating the 168/24 seasonalities until convergence (2 to 3 cycles should be enough)
+	\item Removing the last fitted trend and the two seasonalities we obtain the final residuals
+\end{enumerate}
+
+\begin{figure}[h]
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/extract both 24 and 168-2.pdf}
+		\caption{Uccle station}
+		\label{fig:direct-multi-seasonality:uccs}
+	\end{subfigure}
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.mems_files/figure-latex/extract both 24 and 168-2.pdf}
+		\caption{Membach station}
+		\label{fig:direct-multi-seasonality:mems}
+	\end{subfigure}
+	\begin{center}
+		\caption{Seasonality figures}{\small\textit{Direct} refers to single seasonality extraction\\\textit{Multi} refers to both seasonalities extracted at the same time}
+		\label{fig:direct-multi-seasonality}
+	\end{center}
+\end{figure}
+
+In \figurename~\ref{fig:direct-multi-seasonality} we see both approaches applied to both stations. Those plots show an interesting property of our seasonalities:
+\begin{itemize}
+	\item Both ways of extraction result in the same daily seasonality extracted
+	\item The sum of the daily and weekly seasonalities extracted together is the same as the weekly seasonality extracted directly
+\end{itemize}
+Given in particular the second property, we will only use the 168-hours seasonality while fitting our models, for both the stations.
+
+In \figurename~\ref{fig:decomposed} we see the decomposition results. While data from Uccle station have a clear significativity of both trend and seasonalities, data from Membach could seem not significant. Still, if we notice that the main timeseries lies between values of 0 and 100, we can find out that around half of the value will be composed by the trend, a 30\% by the joined seasonalities component, and the remaining value by the residuals. We will need to better handle the spikes from around half our dataset.
+
+\begin{figure}[h]
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/extract both 24 and 168-1.pdf}
+		\caption{Uccle station}
+		\label{fig:decomposed:uccs}
+	\end{subfigure}
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.mems_files/figure-latex/extract both 24 and 168-1.pdf}
+		\caption{Membach station}
+		\label{fig:decomposed:mems}
+	\end{subfigure}
+	\begin{center}
+		\caption{Timeseries decomposition}{\small Only the second method results are shown for clarity}
+		\label{fig:decomposed}
+	\end{center}
+\end{figure}
+
+
+\newpage
+\section{Parameter estimation}
+\subsection{Uccle station}
+Our training set, despite the precautions taken during the initial data cleanup and aggregation, doesn't satisfy the normality assumption, even after applying the \textit{log} or \textit{Box-Cox} transformations. Thus, we will estimate models to fit our data starting with the original scale.
+\subsubsection{ARIMA}
+The first step to fit an ARIMA will be to check the ACF/PACF plots to estimate the number of parameters. As we can see in \figurename~\ref{fig:pacf-4}, applying the diff operator both on the data and on the seasonal data, result in interpretable plots.
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=1\linewidth]{"project.uccs_files/figure-latex/diffs acf/pacf-4"}
+	\caption{ACF and PACF after diff and diff with lag 168}
+	\label{fig:pacf-4}
+\end{figure}
+
+\subsubsection{MSTL}
+
+\subsection{Membach station}
+\subsubsection{Transformation and normality assumption}
+\subsubsection{ARIMA}
+\subsubsection{MSTL}
+
+\subsection{Seasonplots}
 
 
 
 
-
-\paragraph*{Hypotesis of analysis}
+\subsubsection*{Hypotesis of analysis}
 
 \begin{enumerate}
 	\item Download data from start of March 2019 to present day.

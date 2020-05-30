@@ -7,7 +7,7 @@ output:
     fig_width: 6.5
     fig_height: 4
 #  html_document:
-#    mathjax: local
+#    mathjax: local   
 #    self_contained: no
 #    fig_width: 6.5
 #    fig_height: 4
@@ -199,7 +199,7 @@ gg_qqplot(models[["fit500010"]]$residuals)
 ```{r}
 #fit <- auto.arima(seis.h.train, d=1, D=1, max.p=5, max.q=2, max.P=5, max.Q=2, max.order=10, trace = T, parallel = T)
 ```
-# D=1 m=24
+ # D=1 m=24
  Fitting models using approximations to speed things up...
 
  ARIMA(2,0,2)(1,1,1)[24] with drift         : Inf
@@ -244,7 +244,7 @@ gg_qqplot(models[["fit500010"]]$residuals)
 
  Best model: ARIMA(4,0,0)(2,1,0)[24]   
  
-# d=1, D=1, max.p=5, max.q=2, max.P=5, max.Q=2, max.order=10 m=168
+ # d=1, D=1, max.p=5, max.q=2, max.P=5, max.Q=2, max.order=10 m=168
  Fitting models using approximations to speed things up...
 
  ARIMA(2,1,2)(1,1,1)[168]                    : Inf
