@@ -1,0 +1,11 @@
+*.log
+*.blg
+*.bbl
+*.aux
+*.synctex.gz
+*.toc
+.cache/
+.idea/
+venv/
+__pycache__/
+.Rhistory
