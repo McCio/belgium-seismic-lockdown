@@ -13,9 +13,6 @@ output:
 #    fig_height: 4
 ---
 
-```{r tentatives, eval=FALSE, child='chapter1.Rmd', include=FALSE}
-```
-
 ```{r set mems, include=FALSE}
 # MEMS
 domain <- c(-7200,7200); pattern <- "MEM.*\\.csv"; name <- "MEM"; description <- "Membach"; proj_file <- 'proj.mems.RData'
@@ -37,7 +34,7 @@ train.bc %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168) # arima (0,
 train.bc %>% diff() %>% diff(lag=24) %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5)
 ```
 
-
+## Arima
 ```{r arima}
 to_test <- list(
   c(0,1,0,0,1,1)
@@ -100,7 +97,7 @@ for (model in to_test) {
 
 ```
 
-
+## Arima without seasonality
 ```{r arima on seasonality}
 autoplot(residuals+trend.s)
 residuals.bc.lambda <- BoxCox.lambda(residuals+trend.s)
@@ -169,7 +166,7 @@ accuracy(plotting.forecast, seis.h.test)
 
 
 
-
+## MSTL
 
 ```{r mstl on msts}
 seis.h.train.m <- msts(seis.h.train, c(24, 168))

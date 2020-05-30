@@ -24,6 +24,7 @@ domain <- c(-350000,350000); pattern <- "UCCS.*\\.csv"; name <- "UCCS"; descript
 ```{r project, child='project.Rmd'}
 ```
 
+## Arima
 
 ```{r arima}
 to_test <- list(
@@ -321,7 +322,7 @@ forecast()
 ```
 
 
-
+## MSTL
 ```{r mstl on msts}
 seis.h.train.m <- msts(seis.h.train, c(24, 168))
 seis.mstl <- seis.h.train.m %>% mstl(s.window="periodic") #c(15, 7))

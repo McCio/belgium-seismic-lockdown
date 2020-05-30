@@ -7,11 +7,13 @@ library(lubridate) # floor_date
 library(xts) # zoo
 library(fpp) # auto.arima
 library(ggplot2)
+library(ggrepel) # for nicer labels on ggplot
 # library(gridExtra) # for gg-plotting multiple plots
 library(cowplot) # for plot_grid
 # library(car) # qqPlot
 library(qqplotr) # qqplot with ggplot
-library(tidyverse) # map_df, read_csv, group_by, summarize
+library(spec) # for periodgram
+library(tidyverse) # map_df, read_csv, group_by, summarize...
 library(tsbox) # https://cran.r-project.org/web/packages/tsbox/vignettes/tsbox.html
 ```
 
@@ -62,7 +64,7 @@ seis <-
 # %>% mutate(belgian_second=with_tz(utc_second, "Europe/Brussels"))
 remove(out_domain, invalid_values) # free ~350 Mb from RAM
 ```
-
+## Missing values analysis (seconds)
 ```{r missing values analysis}
 seis.complete <- seis %>% complete(utc_second=seq.POSIXt(from=min(seis$utc_second), to=max(seis$utc_second), by = as.difftime("0:0:1")))
 seis.first.second <- min(seis$utc_second)
@@ -147,7 +149,7 @@ remove(seis.after, seis.before, seis.dst.fix)
 gc()
 ```
 
-
+## Missing values analysis (hours)
 ```{r missing values hour analysis}
 seis.complete <- seis.h %>% complete(utc_hour=seq.POSIXt(from=min(seis.h$utc_hour), to=max(seis.h$utc_hour), by = as.difftime("1:0:0")))
 seis.first.second <- min(seis$utc_second)
@@ -228,8 +230,6 @@ build_ts <- function(dset, periods=NULL, start=NULL, end=NULL, force_ms=T) {
 
 
 
-
-
 ```{r test_train split ts, include=FALSE}
 seis.h.start <- as_datetime('2018-10-29T00:00:00')
 seis.h.end <- as_datetime('2020-03-02T00:00:00') - seconds(1)
@@ -254,7 +254,16 @@ seis.h.test <- window(seis.h.test, start = c(end(seis.h.train)[1] + 1, 1))
 seis.test.length <- length(seis.h.test)
 ```
 
-
+# Analysis
+```{r whole data plot}
+month.starts <- seq.POSIXt(from=floor_date(seis.h.start, 'month'), to=ceiling_date(seis.h.end, 'month'), by = "1 month")
+hours.from.start <- as.numeric(month.starts-seis.h.start)*24+168
+autoplot(seis.h.ts, type="l") +
+  scale_x_continuous(breaks=hours.from.start/168, labels=format(month.starts, "%m-%y")) +
+  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in original scale")
+dec.addi <- decompose(seasonality.aggregate(seis.h.ts))
+autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period)) + xlab("Weeks")
+```
 
 ```{r training data transformation plots}
 month.starts <- seq.POSIXt(from=floor_date(seis.train.start, 'month'), to=ceiling_date(seis.train.end, 'month'), by = "1 month")
@@ -284,9 +293,8 @@ gg_qqplot(train.bc) +
   labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
 ```
 
-
+## Periodgram
 ```{r periodgram}
-library(spec)
 pgram <- spec.pgram(build_ts(seis.h, start = seis.train.start, end = seis.train.end), main="Periodgram", detrend=F, demean=T, na.action=na.aggregate, plot=F, xlim=c(0,1/3600))
 pgram.data <- data.frame(freq=pgram$freq, spec=pgram$spec)
 ggplot(pgram.data) +
@@ -314,20 +322,20 @@ cat("Frequency by unit\n")
 top95seas.h
 
 ratio.color <- function(x) ifelse(x >= (mean(pgram$spec) + sd(pgram$spec)*3), "red", ifelse(x >= (mean(pgram$spec) + sd(pgram$spec)*2), "blue", ifelse(x >= (mean(pgram$spec) + sd(pgram$spec)*1), "darkgreen", "orange")))
-
-library(ggrepel)
+shown_labels <- 4
 periodgram +
   scale_x_continuous(sec.axis = sec_axis(~1/./3600, breaks=c(1, 6*c(1,2,4,4*7)), labels = as.integer, name="hours")) +
   scale_y_continuous(sec.axis = sec_axis(~exp(.), breaks=mean(pgram$spec) + sd(pgram$spec) * c(1:3), labels=c("1", "2", "3")[1:3], name="spectrum/sd ratio")) +
   geom_hline(yintercept=log(mean(pgram$spec) + sd(pgram$spec) * c(1:3)), linetype="dotted", color = ratio.color(mean(pgram$spec) + sd(pgram$spec) * c(1:3))) +
   geom_point(data=data.frame(freq=top95freq, spec=top95pc), aes(freq, log(spec), color=ratio.color(spec)), shape="o", size=4, show.legend = F) +
-  geom_label_repel(data=data.frame(freq=top95freq, spec=top95pc)[1:3,], aes(freq, log(spec), label=round(1/freq/3600), color=ratio.color(spec)), segment.color="grey", show.legend=F) +
+  geom_label_repel(data=data.frame(freq=top95freq, spec=top95pc)[1:shown_labels,], aes(freq, log(spec), label=round(1/freq/3600), color=ratio.color(spec)), segment.color="grey", show.legend=F) +
   scale_color_manual(values = c("darkgreen", "blue", "red")[start_ratio:3])
 
 
 gc()
 ```
 
+## Decomposition
 
 ```{r plot data with (p)acf}
 seis.h.24 <- build_ts(seis.h.train, periods = c(24))
@@ -345,6 +353,7 @@ plot_grid(
 
 ```
 Once notice the composition is additive (the fluctuations does not seem to grow with the trend)
+
 ```{r decompose}
 dec.addi <- decompose(seasonality.aggregate(seis.h.train))
 autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period))
@@ -364,6 +373,7 @@ plot_grid(
   nrow = 3)
 ```
 
+### Manual filtering/decomposition
 We now extract the trend using a linear filter with smoothing parameter $p$ equal to 180 (almost half a year):
 
 ```{r linear trend}
@@ -519,7 +529,7 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 ```
 
 
-
+### Multi trend extraction
 
 ```{r extract both 24 and 168}
 trend.s_compute <- function(ts.in, period) {
@@ -605,17 +615,7 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+# Forecast
 
 ```{r diffs acf/pacf}
 seis.h.train %>% ggtsdisplay(lag.max = 168*5)
