@@ -401,7 +401,7 @@ show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, 
   errorstring <- paste0("MSE=", mse, "  MAE=", mae, "  MAPE=", mape, "  RMSE=", rmse, "  R2=", R2)
   cat("Errors: ", compare.desc, "\n")
   cat("\t","MSE=", mse, "  MAE=", mae, "  MAPE=", mape, "  RMSE=", rmse, "  R2=", R2, "\n")
-
+  
 
   diff_plot <-
     autoplot(diff, ylab = paste0("Difference (", diff.ylab, ")"), xlab = xlab) +
@@ -555,8 +555,9 @@ season_by_mean <- function(ts.in, period) {
   extended <- window(ts.in, end = end, extend=T)
   matrix <- t(matrix(data = extended, nrow = period))
   seasonality.figure <- as.ts(colMeans(matrix, na.rm = T))
-  seasonality <- rep(seasonality.figure, length(extended)/length(seasonality.figure))[1:length(ts)]
-  return(list(figure=seasonality.figure, seasonal=seasonality))
+  seasonality.sd <- as.ts(apply(matrix, 2, sd, na.rm = T))
+  seasonality <- rep(seasonality.figure, length(extended)/length(seasonality.figure))[1:length(ts.in)]
+  return(list(figure=seasonality.figure, seasonal=seasonality, sd=seasonality.sd))
 }
 
 trend_season <- function(ts.in, period) {

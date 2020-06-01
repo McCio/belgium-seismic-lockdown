@@ -1,0 +1,185 @@
+```{r final-model}
+# chosen.model must be c(p,d,q,P,D,Q)
+# seasonality.period a number
+# chosen.lambda NULL or Box-Cox lambda
+
+seis.test.final.start <- seis.test.end + seconds(1)
+seis.test.final.end <- seis.test.final.start + days(7*8) - seconds(1)
+c(seis.train.start, seis.test.final.start, seis.test.final.end)
+
+final.training <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.end, force_ms = T)
+final.testing <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.final.end, force_ms = T)
+final.testing <- window(final.testing, start = c(end(final.training)[1] + 1, 1))
+c(chosen.lambda, BoxCox.lambda(final.training))
+
+fit.name <- paste0("fit", paste0(chosen.model, collapse = ""))
+forecast.name <- paste0("forecast", paste0(chosen.model, collapse = ""))
+cat("SARIMA(", paste0(chosen.model[1:3], collapse = ","), ")(", paste0(chosen.model[4:6], collapse = ","), ")[", frequency(final.training), "]", sep = "")
+if (!exists("final.model")) {
+  cat(" fitting...")
+  final.model <- Arima(final.training, chosen.model[1:3], chosen.model[4:6], lambda=chosen.lambda)
+  cat("DONE")
+}
+if (!exists("final.forecast")) {
+  cat(" forecasting...")
+  final.forecast <- forecast(final.model, h=168*8, lambda=chosen.lambda)
+  cat("DONE")
+}
+cat("\n")
+plotting.model <- final.model
+plotting.forecast <- final.forecast
+cat("AIC =",plotting.model$aic, "\n")
+cat("AICc =",plotting.model$aicc, "\n")
+checkresiduals(plotting.model)
+residuals.acf <- autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*4)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))
+residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*4)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))
+print(plot_grid(residuals.acf, residuals.pacf, nrow=2))
+print(plot_grid(
+  autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=24)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))
+  ,
+  residuals.acf
+  ,
+  autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=24)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))
+  ,
+  residuals.pacf
+  ,
+  nrow = 2
+))
+print(plot_forecast(plotting.forecast) + autolayer(final.testing, series="Original") + ylab("Mean hourly movement (nm)"))
+plots <- show_overlap_and_diff(
+  final.training, plotting.forecast$fitted, xlab=seasonality.xlab,
+  base.desc = "training set",
+  compare.desc = paste0("refit with ", plotting.forecast$method),
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="%",
+  diff.ylab.sec.accuracy = .01
+)
+print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
+
+cat("Test set inside the CI\n")
+cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < final.testing & final.testing < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
+cat("95% CI \t ", print_dec(mean(plotting.forecast$lower[,2] < final.testing & final.testing < plotting.forecast$upper[,2], na.rm = T)*100), "%\n")
+
+plots <- show_overlap_and_diff(
+  final.testing, plotting.forecast$mean, xlab=seasonality.xlab,
+  base.desc = "test set",
+  compare.desc = paste0("forecast with ", plotting.forecast$method),
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="%",
+  diff.ylab.sec.accuracy = .01
+)
+print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
+  
+print(accuracy(plotting.forecast, final.testing))
+# qqPlot(plotting.model$residuals, main = paste0("Q-Q plot for ", plotting.forecast$method), xlab = "residuals")
+print(gg_qqplot(plotting.model$residuals) + 
+    labs(title=paste0("Q-Q plot for ", plotting.forecast$method, " residuals")) + ylab("Residuals quantiles")
+)
+
+```
+
+
+```{r seasonalities/seasonplot}
+final.training.24 <- build_ts(final.training, periods = c(24))
+seasonplot(final.training.24/sd(final.training.24, na.rm = T), type="l", col=rainbow(7))
+legend("topleft", legend=weekdays(seis.train.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+
+
+final.testing.24 <- build_ts(final.testing, periods = c(24))
+seasonplot(final.testing.24/sd(final.training.24, na.rm = T), type="l", col=rainbow(7))
+legend("topleft", legend=weekdays(seis.test.final.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+
+```
+
+
+```{r seasonalities/before}
+aggregated.final <- seasonality.aggregate(final.training)
+season.final.24 <- trend_season(aggregated.final, 24)
+season.final.168 <- trend_season(aggregated.final-season.final.24$seasonal, 168)
+
+season.final.24 <- trend_season(aggregated.final-season.final.168$seasonal, 24)
+season.final.168 <- trend_season(aggregated.final-season.final.24$seasonal, 168)
+
+# this third iteration isn't actually needed
+season.final.24 <- trend_season(aggregated.final-season.final.168$seasonal, 24)
+season.final.168 <- trend_season(aggregated.final-season.final.24$seasonal, 168)
+
+residuals.final <- aggregated.final-season.final.24$seasonal-season.final.168$seasonal-season.final.168$trend
+
+seasonbase.final.24 <- trend_season(aggregated.final, 24)
+seasonbase.final.168 <- trend_season(aggregated.final, 168)
+
+
+plot_grid(
+  autoplot(ts(seasonbase.final.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct daily"), size=1.5) +
+    geom_line(aes(y=season.final.24$figure, col="Multi daily")) +
+    scale_colour_manual("", values=c("purple", "yellow"), breaks=c("Direct daily", "Multi daily")),
+  autoplot(ts(seasonbase.final.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct weekly"), size=1.5) +
+    geom_line(aes(y=season.final.168$figure + rep(season.final.24$figure, 7), col="Multi w+d")) +
+    #geom_line(aes(y=rep(seasonbase.final.24$figure, 7), col="Direct daily"), size=1.5) +
+    #geom_line(aes(y=rep(season.final.24$figure, 7), col="Multi daily")) +
+    geom_line(aes(y=season.final.168$figure, col="Multi weekly")) +
+    scale_colour_manual("", values=c("red", "purple", "blue", "yellow", "green"), breaks=c("Direct weekly", "Direct daily", "Multi" %s+% c(" weekly", " daily", " w+d"))),
+  nrow = 2)
+
+
+```
+
+```{r seasonalities/lockdown}
+aggregated.lockdown <- seasonality.aggregate(final.testing)
+season.lockdown.24 <- trend_season(aggregated.lockdown, 24)
+season.lockdown.168 <- trend_season(aggregated.lockdown-season.lockdown.24$seasonal, 168)
+
+season.lockdown.24 <- trend_season(aggregated.lockdown-season.lockdown.168$seasonal, 24)
+season.lockdown.168 <- trend_season(aggregated.lockdown-season.lockdown.24$seasonal, 168)
+
+# this third iteration isn't actually needed
+season.lockdown.24 <- trend_season(aggregated.lockdown-season.lockdown.168$seasonal, 24)
+season.lockdown.168 <- trend_season(aggregated.lockdown-season.lockdown.24$seasonal, 168)
+
+residuals.lockdown <- aggregated.lockdown-season.lockdown.24$seasonal-season.lockdown.168$seasonal-season.lockdown.168$trend
+
+seasonbase.lockdown.24 <- trend_season(aggregated.lockdown, 24)
+seasonbase.lockdown.168 <- trend_season(aggregated.lockdown, 168)
+
+plot_grid(
+  autoplot(ts(seasonbase.lockdown.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct daily"), size=1.5) +
+    geom_line(aes(y=season.lockdown.24$figure, col="Multi daily")) +
+    scale_colour_manual("", values=c("purple", "yellow"), breaks=c("Direct daily", "Multi daily")),
+  autoplot(ts(seasonbase.lockdown.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct weekly"), size=1.5) +
+    geom_line(aes(y=season.lockdown.168$figure + rep(season.lockdown.24$figure, 7), col="Multi w+d")) +
+    #geom_line(aes(y=rep(seasonbase.lockdown.24$figure, 7), col="Direct daily"), size=1.5) +
+    #geom_line(aes(y=rep(season.lockdown.24$figure, 7), col="Multi daily")) +
+    geom_line(aes(y=season.lockdown.168$figure, col="Multi weekly")) +
+    scale_colour_manual("", values=c("red", "purple", "blue", "yellow", "green"), breaks=c("Direct weekly", "Direct daily", "Multi" %s+% c(" weekly", " daily", " w+d"))),
+  nrow = 2)
+
+```
+
+```{r seasonalities/before-after-compare}
+
+plot_grid(
+  autoplot(ts(season.lockdown.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+    geom_ribbon(aes(ymin = season.lockdown.24$figure - season.lockdown.24$sd, ymax = season.lockdown.24$figure + season.lockdown.24$sd), fill = "mediumpurple1", alpha=0.5) +
+    geom_line(aes(col="Daily lockdown")) +
+    geom_ribbon(aes(ymin = season.final.24$figure - season.final.24$sd, ymax = season.final.24$figure + season.final.24$sd), fill = "lightcoral", alpha=0.5) +
+    geom_line(aes(y=season.final.24$figure, col="Daily before")) +
+    scale_colour_manual("", values=c("purple", "red"), breaks=c("Daily lockdown", "Daily before")),
+  autoplot(ts(season.lockdown.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+    geom_ribbon(aes(ymin = season.lockdown.168$figure - season.lockdown.168$sd, ymax = season.lockdown.168$figure + season.lockdown.168$sd), fill = "mediumpurple1", alpha=0.5) +
+    geom_line(aes(col="Weekly lockdown")) +
+    geom_ribbon(aes(ymin = season.final.168$figure - season.final.168$sd, ymax = season.final.168$figure + season.final.168$sd), fill = "lightcoral", alpha=0.5) +
+    geom_line(aes(y=season.final.168$figure, col="Weekly before")) +
+    scale_colour_manual("", values=c("purple", "red"), breaks=c("Weekly lockdown", "Weekly before")),
+nrow = 2)
+
+
+autoplot(ts(seasonbase.lockdown.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+  geom_ribbon(aes(ymin = seasonbase.lockdown.168$figure - seasonbase.lockdown.168$sd, ymax = seasonbase.lockdown.168$figure + seasonbase.lockdown.168$sd), fill = "mediumpurple1", alpha=0.5) +
+  geom_line(aes(col="Weekly lockdown")) +
+  geom_ribbon(aes(ymin = seasonbase.final.168$figure - seasonbase.final.168$sd, ymax = seasonbase.final.168$figure + seasonbase.final.168$sd), fill = "lightcoral", alpha=0.5) +
+  geom_line(aes(y=seasonbase.final.168$figure, col="Weekly before")) +
+  scale_colour_manual("", values=c("purple", "red"), breaks=c("Weekly lockdown", "Weekly before"))
+```

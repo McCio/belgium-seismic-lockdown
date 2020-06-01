@@ -285,7 +285,7 @@ In particular from the Uccle station, we can see a great number of spikes, that 
 As best practices suggest, we are going to divide the dataset into training and testing datasets with a ratio around $85\%/15\% - 75\%/25\%$.
 Since one of our objectives is to assess any significant difference from before and after the Belgium lockdown (on March, $14^{th}$ the \textit{soft} lockdown, while on March, $18^{th}$ the complete lockdown), we selected data from the start of our timeseries until 20-01-2020 (64 weeks $\approx 82\%$) as training, while the test follows and ends on 27-04-2020 (14 weeks $\approx 18\%$).
 
-This initial division demostrated to be computationally heavy while fitting some models with weekly seasonality, and we noticed a possible yearly seasonality on Uccle data (\figurename~\ref{fig:whole-data-decomposition}). Even if it is not demonstrable given the short period our data comes from, applying a 24-hour MA smoothing filter on the whole dataset and then producing the periodgram as previously done, it suggests a 8748-hours significant periodicity (364.5 days).
+This initial division demostrated to be computationally heavy while fitting some models with weekly seasonality, and we noticed a possible yearly seasonality on Uccle data (\figurename~\ref{fig:whole-data-decomposition}). Even if it is not demonstrable given the short period our data comes from, applying a 24-hour MA smoothing filter on the whole dataset (546 days) and then producing the periodgram as previously done, it suggests a 8748-hours significant periodicity (364.5 days).
 
 \begin{figure}[h]
 	\centering
@@ -372,7 +372,7 @@ As a reminder:
 	\item non-seasonal MA process of order $q$ is described by an exponentially decaying PACF, and by a cut-off of significant ACF values at lag $q$
 	\item seasonal AR process of order $P$ is described by an exponentially decay at seasonal lags on ACF values, and by a cut-off of significant PACF values at each seasonal lag until the $P^{th}$
 	\item seasonal MA process of order $Q$ is described by an exponentially decay at seasonal lags on PACF values, and by a cut-off of significant ACF values at each seasonal lag until the $Q^{th}$
-	\item given how significance is assessed for the ACF/PACF spikes, one over 20 spikes could be \textit{coincidentally significant}
+	\item given how significance is assessed for the ACF/PACF spikes, one over 20 spikes (5\%) could be \textit{coincidentally significant} or \textit{coincidentally \textbf{non}-significant}
 \end{itemize}
 
 
@@ -394,7 +394,7 @@ Also checking the Mean Absolute Percentage Error (MAPE) on the training set, the
 
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=.7\linewidth]{project.uccs_files/figure-latex/arima-26}
+	\includegraphics[width=.7\linewidth]{project.uccs_files/figure-latex/arima-30} %26
 	\caption{ACF and PACF plots for $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$}
 	\label{fig:arima-26}
 \end{figure}
@@ -407,12 +407,12 @@ Then, we assess how the forecasts behave on the test set. The MAPE for all three
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=1\linewidth]{project.uccs_files/figure-latex/arima-27}
+		\includegraphics[width=1\linewidth]{project.uccs_files/figure-latex/arima-32} %27
 		\caption{$\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$}
 		\label{fig:arima-forecast:200011}
 	\end{subfigure}
 	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=1\linewidth]{project.uccs_files/figure-latex/arima-51}
+		\includegraphics[width=1\linewidth]{project.uccs_files/figure-latex/arima-60} %51
 		\caption{$\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$}
 		\label{fig:arima-forecast:412011}
 	\end{subfigure}
@@ -470,12 +470,12 @@ Both models have valid p-value results for the Box-Pierce test, similar AICc val
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=1\linewidth]{"project.mems_files/figure-latex/arima-15"} %18
+		\includegraphics[width=1\linewidth]{"project.mems_files/figure-latex/arima-18"} %15
 		\caption{$\mathrm{ARIMA}(0,1,1)(0,1,1)_{168}$}
 		\label{fig:mems:arima:011011}
 	\end{subfigure}
 	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=1\linewidth]{"project.mems_files/figure-latex/arima-9"} %11
+		\includegraphics[width=1\linewidth]{"project.mems_files/figure-latex/arima-11"} %9
 		\caption{$\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$}
 		\label{fig:mems:arima:200011}
 	\end{subfigure}
@@ -487,7 +487,7 @@ Both models have valid p-value results for the Box-Pierce test, similar AICc val
 
 The first model catches a rapidly-increasing trend, while the latter predicts more stable values moving the most part of the increasing trend into increasing variability. Visually, both could be acceptable, even if the latter seems to better behave on \textit{normal} days losing precision on high-valued ones, while the first tries to better accomodate the high-valued days losing precision on the \textit{normal} ones.
 
-Analytically, we have quite a difference between the two models in terms of adherence of the confidence intervals.
+Analytically, we have quite a difference between the two models in terms of adherence of the confidence intervals:
 \begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item $\mathrm{ARIMA}(0,1,1)(0,1,1)_{168}$: $\approx98\%$ of data is in the $80\%$ CI and $\approx99\%$ in the $95\%$ CI
 	\item $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$: $\approx73\%$ of data is in the $80\%$ CI and $\approx89\%$ in the $95\%$ CI
@@ -498,36 +498,47 @@ Thus, we can select the $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ model on the Box-Co
 
 %\subsubsection{MSTL}
 
-\subsection{Seasonality comparison}
-\subsection{Lockdown forecast divergence}
 \section{Conclusion}
-\subsubsection{Limitations}
-\subsubsection{Future Works}
+\subsection{Lockdown influence}
+Even if the two models have the same order, they cannot be directly compared, for the Membach model works after a transformation pass.
 
-\subsubsection*{Hypotesis of analysis}
+We can still compare how the seasonalities differ with respect with each original dataset and between each other. We extract the seasonalities for each station highlighting the standard deviation confidence band for an estimated error of 67\%. This estimation lies on the assumption that values for each single hour in the hourly/weekly seasonality is Normally distributed, a slightly different assumption that is not necessarily refuted by the already seen Q-Q plots.
 
-\begin{enumerate}
-	\item Download data from start of March 2019 to present day.
-	\item Aggregate the data in slots of 30 minutes or 1 hour, keeping the maximum ground displacements in both negative and positive directions to maintain the same variables meaning.
-	\item Compute the total ground displacement for each result point.
-	\item Verify that we have a stationary time series (we expect that for the meaning that it brings: ground is not moving up or down).
-	\item Extract through a linear filter (probably MA) different seasonalities and residuals.
-\end{enumerate}
-
-The extraction of seasonalities is the focus point of this work: as \cite{NatureCoronavirusSeismic} seems to conclude, there is a clear weekly seasonality in at least the \textbf{Uccle} data. We should test against different seasonalities through the stations, extracting more at once if the residuals suggest their presence.
-
-Fitted models with these seasonalities, only from data before the Belgium lockdowns (on March, 14th the "soft" lockdown, while on March, 18th the complete lockdown), should let us forecast data for after the lockdown and test for statistical difference.
-
-Also, comparison between models and seasonalities from chosen stations could be done, to assess any statistical difference between apparent human impact registered from places with different standard human activity.
-
-Eventually, some attention could be given to events registered through the analysed time.
-
-
-
+\begin{figure}[h]
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/seasonalities/before-after-compare-1"}
+		\caption{Uccle station}
+		\label{fig:season.lockdown:uccs}
+	\end{subfigure}
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/seasonalities/before-after-compare-1"}
+		\caption{Membach station}
+		\label{fig:season.lockdown:mems}
+	\end{subfigure}
+	\begin{center}
+		\caption{Seasonalities computed before and after the lockdown}{\small Seasonalities are extracted together}
+		\label{fig:season.lockdown}
+	\end{center}
+\end{figure}
 
 
+As we can see in \figurename~\ref{fig:season.lockdown}, even if the seasonalities shapes seem very different, in particular regarding the weekly seasonality, the differences are still included in the highlighted confidence bands, apart from a few hours. This is true for both stations.
+Yet, it is useful to notice that the weekly seasonalities include a possibly interesting daily component, influenced by the weekend drops in values.
+
+%\subsection{Lockdown forecast divergence}
+%Uccle: remodel on 52+18 (until 1st March 2020), forecast 2 months (8 weeks) => diff in MAPE
+%Membach: remodel on 52+18 (until 1st March 2020), forecast 2 months (8 weeks) => diff in MAPE
 
 
+\subsection{Limitations and future works}
+The main limitations of this projects that we can identify are: multiple seasonalities and Normality assumption.
+
+The tested models do not effectively include both daily and weekly seasonalities, even if initially we thought so. Also they cannot include the apparent yearly seasonality, mainly because of the short timeseries.
+To overcome this limitation, we could try different models, also ARIMA-based, that can estimate multiple seasonalities. The first that we tested models seasonalites through Fourier terms. The main problem that lead us not to go further with that approach is that our seasonalities cannot be expressed by a combination of few sine and cosine curves. This requires a high number of curves to estimate, that requires an heavy computational power.
+
+To compensate those difficulties, in the literature it is suggested to test TBATS models, which combines Fourier terms, Box-Cox transformation, and exponential smoothing. This seems a suitable approach given the analyses we performed until now, that can possibly address the non-Normal distribution.
+
+The final suggestion for future work would be to better analyse the differences between stations, in such a way to better correlate different influences of the lockdown on the areas near each station.
 
 
 

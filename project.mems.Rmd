@@ -149,7 +149,7 @@ for (model in to_test) {
 
 ```{r auto arima, eval=FALSE, include=FALSE}
 fit <- auto.arima(seis.h.train, lambda=train.bc.lambda, d=1, D=1, max.p=5, max.q=2, max.P=5, max.Q=2, max.order=10, trace = T)
-models[["forecast011011"]]$mean
+models[["forecast011011"]]$upper-models[["forecast011011"]]$mean
 ```
 
 ## Arima without seasonality
@@ -282,6 +282,15 @@ bptests.plot <-
     scale_x_continuous(breaks=1:10)
 bptests.plot
 
+```
+
+
+```{r final model selection}
+chosen.model <- c(2,0,0,0,1,1)
+chosen.lambda <- train.bc.lambda
+```
+
+```{r project, child='project.after.Rmd'}
 ```
 
 
