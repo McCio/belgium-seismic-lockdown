@@ -395,11 +395,12 @@ show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, 
 
   mse <- mean(diff^2, na.rm = T)
   mae <- mean(abs(diff), na.rm = T)
+  mape <- mean(abs(diff/base) * 100, na.rm = T)
   rmse <- sqrt(mse)
   R2 <- 1-(sum((diff)^2, na.rm = T)/sum((base-mean(base))^2, na.rm = T))
-  errorstring <- paste0("MSE=", mse, "    MAE=", mae, "    RMSE=", rmse, "    R2=", R2)
+  errorstring <- paste0("MSE=", mse, "  MAE=", mae, "  MAPE=", mape, "  RMSE=", rmse, "  R2=", R2)
   cat("Errors: ", compare.desc, "\n")
-  cat("\t","MSE=", mse, "    MAE=", mae, "    RMSE=", rmse, "    R2=", R2, "\n")
+  cat("\t","MSE=", mse, "  MAE=", mae, "  MAPE=", mape, "  RMSE=", rmse, "  R2=", R2, "\n")
 
 
   diff_plot <-
@@ -433,6 +434,11 @@ Then we use a filter able also to capture some seasonal effect so we will be abl
 f <- seasonality.period
 weights.s <- c(0.5, rep(1,f-1), 0.5)/f
 trend.s <- stats::filter(seasonality.aggregate(seis.h.train), side=2, filter=weights.s)
+stats::filter(seasonality.aggregate(seis.h.train), sides=2, filter = weights.s) %>% autoplot()
+stats::filter(seasonality.aggregate(seis.h.train) %>% diff(), sides=2, filter = weights.s) %>% autoplot()
+stats::filter(seasonality.aggregate(seis.h.train) %>% diff(lag=168), sides=2, filter = weights.s) %>% autoplot()
+stats::filter(seasonality.aggregate(seis.h.train) %>% diff() %>% diff(lag=168), sides=2, filter = weights.s) %>% autoplot()
+mean((seasonality.aggregate(seis.h.train) %>% diff(lag=168))[(1+(168*4)):(1+(168*6))])
 
 plots <- show_overlap_and_diff(
   dec.addi$trend, trend.s, xlab=seasonality.xlab,
@@ -618,19 +624,48 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 # Forecast
 
 ```{r diffs acf/pacf}
-seis.h.train %>% ggtsdisplay(lag.max = 168*5)
-seis.h.train %>% diff() %>% ggtsdisplay(lag.max = 168*5)
+seis.h.train %>% ggtsdisplay(lag.max = 168*4)
+seis.h.train %>% diff() %>% ggtsdisplay(lag.max = 168*4)
 # seis.h.train %>% diff(D=2) %>% ggtsdisplay(lag.max = 168)
 # seis.h.train %>% diff(lag=24) %>% ggtsdisplay(lag.max = 168)
 # seis.h.train %>% diff() %>% diff(lag=24) %>% ggtsdisplay(lag.max = 24, main="Supposed model: ARIMA(24,1,0)(0,1,2)[24]") # ARIMA(0,1,0)(0,1,2)[24]
 # previous => ARIMA(5,1,0)(0,1,7)[24]
 # seis.h.train %>% diff() %>% diff(lag=24, D=2) %>% ggtsdisplay(lag.max = 168)
-seis.h.train %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5) # arima (0,0,0)(0,1,1/2)[168]
+seis.h.train %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*4) # arima (0,0,0)(0,1,1/2)[168]
 # acf variable and partially sinusoidal, pacf shows peaks each 168
-seis.h.train %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5) # arima (0,1,0)(0,1,1)[168]
-# acf cuts off after p=168, pacf shows peaks each 168
+seis.h.train %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*4) # arima (0,1,0)(0,1,1)[168]
+seis.h.train %>% diff() %>% diff(lag=168) %>% ggtsdisplay(lag.max = 172) # arima (0,1,0)(0,1,1)[168]
+# acf cuts off after p=168, pacf shows peaks each 168   
 # seis.h.train %>% diff() %>% diff(lag=168, D=2) %>% ggtsdisplay(lag.max = 168)
-seis.h.train %>% diff() %>% diff(lag=24) %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*5)
+seis.h.train %>% diff() %>% diff(lag=24) %>% diff(lag=168) %>% ggtsdisplay(lag.max = 168*4)
+```
+
+```{r diffs/d168-acf-pacf}
+plot_grid(
+  seis.h.train %>% diff(lag=168) %>%  acf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
+  ,
+  seis.h.train %>% diff(lag=168) %>%  acf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
+  ,
+  seis.h.train %>% diff(lag=168) %>% pacf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
+  ,
+  seis.h.train %>% diff(lag=168) %>% pacf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
+  ,
+  nrow = 2
+)
+```
+
+```{r diffs/d-d168-acf-pacf}
+plot_grid(
+  seis.h.train %>% diff() %>% diff(lag=168) %>%  acf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
+  ,
+  seis.h.train %>% diff() %>% diff(lag=168) %>%  acf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
+  ,
+  seis.h.train %>% diff() %>% diff(lag=168) %>% pacf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
+  ,
+  seis.h.train %>% diff() %>% diff(lag=168) %>% pacf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
+  ,
+  nrow = 2
+)
 ```
 
 ```{r plot_forecast func}
