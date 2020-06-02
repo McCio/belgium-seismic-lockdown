@@ -92,8 +92,8 @@ for (i in 1:length(seis.missing.ids)) {
 }
 blocks[nrow(blocks) + 1, ] <- c(block_start, block_end)
 blocks$interval <- seconds(blocks$end - blocks$start + 1)
-blocks$start <- seis.first.second + seconds(blocks$start)
-blocks$end <- seis.first.second + seconds(blocks$end)
+blocks$start <- seis.first.second + seconds(blocks$start - 1)
+blocks$end <- seis.first.second + seconds(blocks$end - 1)
 plot(blocks$start, blocks$interval,
      col=ifelse(blocks$interval<3600, "darkgreen", "darkred"),
      main="Consecutive seconds of missing values",
@@ -115,11 +115,12 @@ gc()
 ```{r group by hour, include=FALSE}
 bruxelles <- function(d) with_tz(d, "Europe/Brussels")
 force_bruxelles <- function(d) force_tz(d, "Europe/Brussels")
+force_utc <- function(d) force_tz(d, "UTC")
 
 seis.h <- 
   seis %>%
   # mutate(utc_hour=as_datetime(date(utc_second)) + hour(utc_second) * 3600) %>% # this forces the hour to represent bruxelles local time in utc. tz-ed time is normally evaluated in utc by ts-related functions
-  group_by(utc_hour=floor_date(force_tz(bruxelles(utc_second), "UTC"), "1 hour")) %>%
+  group_by(utc_hour=floor_date(force_utc(bruxelles(utc_second)), "1 hour")) %>%
   summarize(mean_movement_s=mean(max-min)) # %>%
 #  complete(utc_hour=seq.POSIXt(from=min(seis$utc_second), to=max(seis$utc_second), by = as.difftime("1:0:0")))
 
@@ -158,7 +159,7 @@ seis.missing.ids <- which(is.na(seis.complete$mean_movement_s))
 seis.present <- length(seis.h$utc_hour)
 seis.total <- length(seis.complete$utc_hour)
 seis.missing <- seis.total - seis.present
-seis.present %s+% " present values, " %s+% seis.missing %s+% " missing points (" %s+% print_dec(seis.present / seis.total * 100, 2) %s+% "% / " %s+% print_dec(seis.missing / seis.total * 100, 2) %s+% "%)"
+cat(seis.present, "present values,", seis.missing, "missing points (", print_dec(seis.present / seis.total * 100, 2), "% /", print_dec(seis.missing / seis.total * 100, 2), "% )\n")
 
 block_start <- NULL
 block_end <- NULL
@@ -177,8 +178,8 @@ for (i in 1:length(seis.missing.ids)) {
 }
 blocks[nrow(blocks) + 1, ] <- c(block_start, block_end)
 blocks$interval <- hours(blocks$end - blocks$start + 1)
-blocks$start <- seis.first.second + hours(blocks$start)
-blocks$end <- seis.first.second + hours(blocks$end)
+blocks$start <- seis.first.second + seconds(blocks$start - 1)
+blocks$end <- seis.first.second + seconds(blocks$end - 1)
 plot(c(rbind(blocks$start, blocks$end, NA)), rep(hour(blocks$interval), each=3),
      col=ifelse(blocks$interval<3600, "darkgreen", "darkred"),
      main="Consecutive hours of missing values",
@@ -194,7 +195,6 @@ text(x=blocks$start + make_difftime(hour=sapply(hour(blocks$interval), "/", y=2)
 remove(seis.complete, seis.missing.ids)
 
 blocks$interval
-Box.test(seis.h$mean_movement_s, type="Box-Pierce")
 
 ```
 
@@ -389,20 +389,18 @@ show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, 
     autoplot(compare, xlab=xlab, ylab=overlap.ylab) +
       geom_line(aes(y=base, col="red"), show.legend = F) +
       labs(title=paste0(base.desc, " vs ", compare.desc))
-  span <- max(compare, base, na.rm = T) - min(compare, base, na.rm = T)
   diff <- compare-base
-  accu.lims <- diff.ylab.sec.accuracy / 100 * span * c(-3,3)
 
   mse <- mean(diff^2, na.rm = T)
   mae <- mean(abs(diff), na.rm = T)
   mape <- mean(abs(diff/base) * 100, na.rm = T)
   rmse <- sqrt(mse)
   R2 <- 1-(sum((diff)^2, na.rm = T)/sum((base-mean(base))^2, na.rm = T))
-  errorstring <- paste0("MSE=", mse, "  MAE=", mae, "  MAPE=", mape, "  RMSE=", rmse, "  R2=", R2)
   cat("Errors: ", compare.desc, "\n")
   cat("\t","MSE=", mse, "  MAE=", mae, "  MAPE=", mape, "  RMSE=", rmse, "  R2=", R2, "\n")
   
-
+  span <- max(compare, base, na.rm = T) - min(compare, base, na.rm = T)
+  accu.lims <- diff.ylab.sec.accuracy / 100 * span * c(-3,3)
   diff_plot <-
     autoplot(diff, ylab = paste0("Difference (", diff.ylab, ")"), xlab = xlab) +
       expand_limits(y=accu.lims) +
