@@ -442,4 +442,86 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 
 
-# After that first extraction, we 
+# After that single extraction, we try extracting two seasonalities at once.
+# Since the procedure is fixed, we define a couple of functions to better handle it.
+# trend.s_compute only apply the seasonality-gnostic symmetric MA filter
+trend.s_compute <- function(ts.in, period) {
+  f <- period
+  weights.s <- c(0.5, rep(1,f-1), 0.5)/f
+  trend.s <- stats::filter(ts.in, side=2, filter=weights.s)
+  return(trend.s)
+}
+# season_by_mean computes the seasonality figure using the mean-over-period methodology
+# it also computes the standard deviation and produces the complete seasonality on all ts length
+season_by_mean <- function(ts.in, period) {
+  freq <- frequency(ts.in)
+  if (freq == period) {
+    end <- c(end(ts.in)[1], period)
+  } else {
+    end <- c(((end(ts.in)[1] * freq) %/% period + 1) * (period/freq), freq)
+  }
+  extended <- window(ts.in, end = end, extend=T)
+  matrix <- t(matrix(data = extended, nrow = period))
+  seasonality.figure <- as.ts(colMeans(matrix, na.rm = T))
+  seasonality.sd <- as.ts(apply(matrix, 2, sd, na.rm = T))
+  seasonality <- rep(seasonality.figure, length(extended)/length(seasonality.figure))[1:length(ts.in)]
+  return(list(figure=seasonality.figure, seasonal=seasonality, sd=seasonality.sd))
+}
+# trend_season applies the two functions to compute both trend and seasonality with one call
+trend_season <- function(ts.in, period) {
+  trend.s <- trend.s_compute(ts.in, period)
+  season <- season_by_mean(ts.in-trend.s, period)
+  season$trend <- trend.s
+  return(season)
+}
+
+
+
+# We now use those functions to extract the 24/168 hours seasonalities together
+aggregated <- seasonality.aggregate(seis.h.train)
+# first iteration
+season.24 <- trend_season(aggregated, 24)
+season.168 <- trend_season(aggregated-season.24$seasonal, 168)
+# second iteration
+season.24 <- trend_season(aggregated-season.168$seasonal, 24)
+season.168 <- trend_season(aggregated-season.24$seasonal, 168)
+# this third iteration isn't actually needed, but we apply it to check convergence
+season.24 <- trend_season(aggregated-season.168$seasonal, 24)
+season.168 <- trend_season(aggregated-season.24$seasonal, 168)
+# We now plot the extracted components, just like decompose/stl methods
+plot_grid(
+  autoplot(aggregated) + labs(title="Timeseries", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(b=-6, unit="pt")),
+  autoplot(ts(season.24$figure, frequency=1)) + labs(title="Daily seasonality", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(r=10, b=-6, unit="pt")),
+  autoplot(ts(season.168$trend, frequency=168)) + labs(title="Trend", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(l=4, b=-6, unit="pt")),
+  autoplot(ts(season.168$figure, frequency=1)) + labs(title="Weekly seasonality", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(r=10, b=-6, unit="pt")),
+  autoplot(aggregated-season.24$seasonal-season.168$seasonal-season.168$trend) + labs(title="Residuals", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(t=-6, b=-6, unit="pt")),
+  autoplot(season.168$figure + rep(season.24$figure, 7)) + labs(title="Weekly seasonality (sum)", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(r=10, b=-6, unit="pt")),
+  nrow = 3,
+  greedy = T)
+# we can also directly extract the 24/168 hours seasonalities from the dataset, and then compare it with the multi extraction
+seasonbase.24 <- trend_season(aggregated, 24)
+seasonbase.168 <- trend_season(aggregated, 168)
+plot_grid(
+  autoplot(ts(seasonbase.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct daily"), size=1.5) +
+    geom_line(aes(y=season.24$figure, col="Multi daily")) +
+    scale_colour_manual("", values=c("purple", "yellow"), breaks=c("Direct daily", "Multi daily")),
+  autoplot(ts(seasonbase.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct weekly"), size=1.5) +
+    geom_line(aes(y=season.168$figure + rep(season.24$figure, 7), col="Multi w+d")) +
+    geom_line(aes(y=season.168$figure, col="Multi weekly")) +
+    scale_colour_manual("", values=c("red", "purple", "blue", "yellow", "green"), breaks=c("Direct weekly", "Direct daily", "Multi" %s+% c(" weekly", " daily", " w+d"))),
+  nrow = 2)
+# the composed 168 hours seasonality equal to the directly extracted one
+plots <- show_overlap_and_diff(
+  seasonbase.168$figure, season.168$figure + rep(season.24$figure, 7), xlab="Hours",
+  base.desc = "168 from ds",
+  compare.desc = "168+24 from ds",
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between 168",
+  diff.ylab = "nm", diff.ylab.sec="% over season span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+
+
+# 
