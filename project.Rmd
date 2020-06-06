@@ -428,6 +428,26 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 Then we use a filter able also to capture some seasonal effect so we will be able to find the residuals. We are going to choose $f=365$ so to have the moving average from the first day of the year to the last one and then shifted from the second day of the year to the first one of the following year and so, this is because we believe to have an yearly seasonality.
 
+```{r trend Spencer}
+weights.s <- c(-3,-6,-5,3,21,46,67)
+weights.s <- c(weights.s, 74, rev(weights.s))
+weights.s <- weights.s/sum(weights.s)
+trend.s <- stats::filter(seasonality.aggregate(seis.h.train), side=2, filter=weights.s)
+
+plots <- show_overlap_and_diff(
+  dec.addi$trend, trend.s, xlab=seasonality.xlab,
+  base.desc = "additive decomposition trend",
+  compare.desc = "Spencer's 15-point MA",
+  overlap.ylab = "Trend (nm)",
+  diff.title = "Difference between trends",
+  diff.ylab = "nm", diff.ylab.sec="% over trend span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+
+```
+
 ```{r trend MA}
 f <- seasonality.period
 weights.s <- c(0.5, rep(1,f-1), 0.5)/f
