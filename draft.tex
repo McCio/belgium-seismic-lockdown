@@ -145,7 +145,7 @@
 \section{Introduction}
 
 \subsubsection{Motivation and objective}
-Thanks to the recent coronavirus outbreak worldwide, we currently have data about many different phoenomena from periods with standard human activity, and from a period with reduced human activity.
+Thanks to the recent COVID-19 outbreak worldwide, we currently have data about many different phoenomena from periods with standard human activity, and from a period with reduced human activity.
 
 Inspired by an article published during the initial phases of the Belgium-wide lockdown \cite{NatureCoronavirusSeismic}, we want to assess whether the lockdown period can be correlated with a visible change in seismic activity.
 It is important to notice that some industrial events, such as mine explosions, are already mapped by seismologic institutions since they interfere with seismic surveys \cite{OtherSeismicEvents}. Such events are sometimes comparable with natural seismic events, depending on the distance from the seismograph.
@@ -166,7 +166,7 @@ ROB collects data from 9 stations. Of those, the following 6 have interesting po
 Data collected from near a city and from near a natural park could be selected, in order to compare possible seasonality results and differences from before and after the lockdown. %Also data from \textbf{Ostenda} station could be interesting, given the possible sea influence.
 Considered these factors, we selected the \textbf{Uccle} and \textbf{Membach} stations.
 
-It is important to notice that the \textit{day}ly data in each file is considered in UTC time, an optimal choice to publish data in a machine-readable way, even if this could cause some issues while interpreting the results.
+It is important to notice that the daily data in each file refers to the UTC time instead of the local Europe/Brussels time, an optimal choice to publish data in a machine-readable way, even if this could cause some issues while interpreting the results.
 
 \subsection{Data cleanup and transformation}\label{sec:cleanup-transform}
 \subsubsection{Data gathering and cleanup}
@@ -193,7 +193,7 @@ In particular, we find that out of $\approx50$ million seconds, from 27-10-2018 
 % 49929756 present values, 184421 missing points ( 99.63 % / 0.37 % )
 
 \subsubsection{Data aggregation and initial transformation}
-Since we are not interested in second-precise analysis, and it would be computationally expensive to deal with the whole dataset, we are going to aggregate data by hour. The aggregation will get us around 14 thousand points, that can still result in interpretable models.
+Since we are not interested in a second-precise analysis, and it would be computationally expensive to deal with the whole dataset, we are going to aggregate data by hour. The aggregation will get us around 14 thousand points, that can still result in interpretable models.
 
 While performing this operation, we should consider the correct timezone: any seasonal analysis dealing with UTC data would be out of phase between the half-year when Belgium follows the UTC+01 timezone, and the half-year when it follows the UTC+02 timezone. With the help of the \texttt{lubridate} R package we converted to the actual timezones, and then we kept the actual objects without being timezone explicit, because all the methods we are going to use are smart enough to work on the UTC conversion of datetimes. This transformation made it possible to have, for example, the time 6:00 in the timeseries to represent the local time in Belgium (\textit{Europe/Bruxelles}), without being influenced by the actual timezone on that specific day.
 
@@ -224,7 +224,7 @@ The aggregation was performed considering the mean max-min difference, for the f
 After aggregating by hour, the percentages of missing values remain quite stable. As can be seen from \figurename{s} \ref{missing-values-seconds:uccs} and \ref{missing-values-seconds:mems}, both stations missing values are grouped in few consecutive periods.
 To deal with them when R methods need complete timeseries, we will define different completion strategies depending on the seasonality we will be studying, always based on the R function \texttt{na.aggregate}.
 
-In particular, after a visual analysis after decomposition, we can suppose the 90 hours gap from the Uccle station is related to some changes to the seismic equipment, that resulted in slightly more precise measurements.
+In particular, after a visual analysis of the decomposition results, we can suppose the 90 hours gap from the Uccle station is related to some changes to the seismic equipment, that resulted in slightly more precise measurements.
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
@@ -244,14 +244,14 @@ In particular, after a visual analysis after decomposition, we can suppose the 9
 \subsubsection{Seasonality assumptions}
 The already cited article \cite{NatureCoronavirusSeismic} suggests the existence of a weekly seasonality. Looking at the data it seems confirmed, in addition to a daily seasonality.
 
-Since our main focus is on the seasonalities themselves, in order to prevent assumptions based on the objective, so that searching for correlation with human activity becomes imposing human-based seasonality periods, we will use an analytical method to extract seasonalities that the data itself suggests to us. Still, we recognize that the already performed transformations impose an human-based time alteration to the data itself (Section \ref{sec:cleanup-transform}).
+Since our main focus is on the seasonalities themselves, we aim to prevent assumptions based on this objective. In other words, we want to avoid searching for correlation with human activity while imposing human-based seasonality periods. Thus, we will use an analytical method to extract seasonalities that the data itself suggests to us. Still, we recognize that the already performed transformations impose an human-based time alteration to the data itself (Section \ref{sec:cleanup-transform}).
 
 The method we are going to apply is based on the Fourier Transform, and generates a \textit{periodgram} highlighting the most interesting frequencies that might correspond to a seasonality component.
 Applying the FT for any frequency, we transform our 1-dimensional data into a 2-dimensional data mapped around a circle. Then, we can sum all the resulting vectors (that are our new data points) to obtain a vector for each frequency, whose absolute value represents the power level of the same frequency. An high power level represents a significant periodicity on that frequency in our original data.
 
 A common operation to increase the difference between significant and non-significant periodicities is to apply a MA smoothing filter with a smaller window than the interesting ones. We will use such a filter with $f=2$.
 
-On this note we must specify that, when a significant periodicity is found, it influences smaller periodicities given by $f*\{2,3,\dots\}$ the significant frequency. Also, if any periodicity is found that is longer than the original dataset, it must be considered as a \textit{coincidence}, rather than a surprising serendipity.
+On this note we must specify that, when a significant periodicity is found, it influences smaller periodicities given by $f*\{2,3,\dots\}$ the significant frequency. Also, if any periodicity is found that is longer than the original dataset, it must be considered as simple chance, rather than serendipity.
 
 Since we will be applying this method on the dataset indexed by a datetime object, which uses the second as the unit, the transformation of frequency $f$ into hourly periodicity $p$ is obtained by $p=(1/f)/3600$.
 We can analyse the resulting periodgrams for Uccle and Membach stations in \figurename{s} \ref{fig:periodgram:uccs} and \ref{fig:periodgram:mems}.
@@ -341,7 +341,7 @@ In \figurename~\ref{fig:direct-multi-seasonality} we see both approaches applied
 \end{itemize}
 Given in particular the second property, we will only use the 168-hours seasonality while fitting our models, for both the stations.
 
-In \figurename~\ref{fig:decomposed} we see the decomposition results. While data from Uccle station have a clear significativity of both trend and seasonalities, data from Membach could seem not significant. Still, if we notice that the main timeseries lies between values of 0 and 100, we can find out that around half of the value will be composed by the trend, a 30\% by the joined seasonalities component, and the remaining value by the residuals. We will need to better handle the spikes from around half our dataset.
+In \figurename~\ref{fig:decomposed} we see the decomposition results. While data from Uccle station have a clear significativity of both trend and seasonalities, data from Membach could seem not significant. Still, if we notice that the main timeseries lies between values of 0 and 100, we can find out that around half of the value will be composed by the trend, a 30\% by the joined seasonalities component, and the remaining value by the residuals. We will need to better handle the spikes starting from the middle of our dataset.
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
@@ -359,6 +359,11 @@ In \figurename~\ref{fig:decomposed} we see the decomposition results. While data
 		\label{fig:decomposed}
 	\end{center}
 \end{figure}
+
+
+Some R commands cannot handle timeseries with missing values, but as we have seen both stations datasets include missing values.
+Also, please note that we are going to have a timeseries object indexed by weeks, so that it contains the 168 hours between each integer.
+Since we know that the longest missing values series is 90 hours long, we can apply a simple completion strategy for serving those commands a filled timeseries: we will substitute missing values with the mean of the week they are in; in R terms \texttt{na.aggregate(x, floor)}.
 
 
 \section{Parameter estimation}
@@ -380,28 +385,38 @@ As a reminder:
 \subsubsection{ARIMA}
 Our training set, despite the precautions taken during the initial data cleanup and aggregation, doesn't satisfy the Normality assumption, even after applying the \textit{log} or \textit{Box-Cox} transformations. Thus, we will estimate the models using the original scale.
 
-Since our dataset shows a relevant trend component, resulting in non-constant mean, we consider the usage of the \textit{diff} operator to smooth the mean.
+Since our dataset shows a relevant trend component, resulting in non-constant mean, we consider the usage of the \textit{diff}\footnote{The \textit{diff} operator applies the \textit{d}-order differences, by default on lag 1 (\textit{simple}). All \textit{diff} operators we will apply use $d=1$.} operator to smooth the mean.
 After applying the \textit{diff} operator with lag 168, in conjunction with the simple \textit{diff} or not, we come up with two possible models by checking the ACF and PACF plots:
 \begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item from using both \textit{diff}s, the ACF and PACF on the long run hint to $\mathrm{ARIMA}(0,1,0)(0,1,1)_{168}$
 	\item from using just the lagged \textit{diff}, the PACF on the first lags and the ACF/PACF combination on the long run hint to $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$
 \end{itemize}
-We also employ the \textit{auto.arima} stepwise methodology, locking the \textit{diff} values to 0 or 1, to get some hints on the possible models.
+We also employ the \textit{auto.arima} stepwise methodology\footnote{The \textit{auto.arima} stepwise methodology fits different ARIMA models within a range of orders, and based on each result's information criteria it will try to minimize it by changing each time one of the \textit{p}, \textit{d}, \textit{q}, \textit{P}, \textit{D}, or \textit{Q} values, depending on the configured limits.}, locking the \textit{diff} values to 0 or 1, to get some hints on the possible models.
 
 Following both the analytical ways and the \textit{auto.arima} hints, and refining the models through further inspection of ACF/PACF plots of the residuals, we end up with three characteristic models. We selected them through the Akaike Information Criterion (AIC), being the only three out of the fitted models with $\mathrm{AIC} < 120.000$: $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$, $\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$, and $\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$.
 
 Also checking the Mean Absolute Percentage Error (MAPE) on the training set, they actually have the lowest three values ($\mathrm{MAPE} < 6.2\%$). Nevertheless, MAPE is not a single valid criterion for selection, since a low error predicting the training set itself does not necessarily mean a good forecast power.
 
 \begin{figure}[h]
-	\centering
-	\includegraphics[width=.7\linewidth]{project.uccs_files/figure-latex/arima-26} %30
-	\caption{ACF and PACF plots for $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$}
-	\label{fig:arima-26}
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/arima-26} %30
+		\caption{ACF and PACF plots}
+		\label{fig:arima-26}
+	\end{subfigure}
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/arima-24} %28
+		\caption{Q-Q plot}
+		\label{fig:arima-24}
+	\end{subfigure}
+	\begin{center}
+		\caption{Plots for $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$}
+		\label{fig:arima}
+	\end{center}
 \end{figure}
 
-The ACF and PACF of the residuals for all three models are really similar (\figurename~\ref{fig:arima-26}), even if the models themselves have great differences in meaning and in number of parameters: they highlight a clear seasonal ARMA process with periodicity 24. This shows how our previous conclusion that the 168 hours seasonality could include the 24 hours one is flawed. Unfortunately, the parameters estimator we are using does not permit to estimate multiple seasonalities\footnote{\textit{Arima} method from the \textit{forecast} R package, only specifying the seasonal and non-seasonal orders}.
+The ACF and PACF of the residuals for all three models are really similar (\figurename~\ref{fig:arima-26}), even if the models themselves have great differences in meaning and in number of parameters: they highlight a clear seasonal ARMA process with periodicity 24. This shows how our previous conclusion that the 168 hours seasonality could include the 24 hours one is flawed. Unfortunately, the parameters estimator we are using does not permit to estimate multiple seasonalities\footnote{\textit{Arima} method from the \textit{forecast} R package, only specifying the seasonal and non-seasonal orders.}.
 
-Probably related to the 24 hours periodicity that remains on the residuals, together with the non-Normality of the original data, all Q-Q plots show clear divergence on both sides of the distribution. The Box-Pierce test statistics accept the independence hypothesis between residuals.
+Probably related to the 24 hours periodicity that remains on the residuals, together with the non-Normality of the original data, all Q-Q plots show clear divergence on both sides of the distribution (\figurename~\ref{fig:arima-24}). The Box-Pierce test statistics accept the independence hypothesis between residuals.
 
 Then, we assess how the forecasts behave on the test set. The MAPE for all three models more than doubles to around 17\% for $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ and around 15\% for the other two. This is expected, since normally the model is more fitted to the training data than to unknown future data. Also, it must be noted that a January $1^{st}$ period lies in our test dataset, and without being able to include a yearly seasonality, that leads to greater errors just from those couple of weeks (\figurename~\ref{fig:arima-forecast:200011}).
 
@@ -462,7 +477,7 @@ Since the $\lambda$ value approximately simplifies the Box-Cox transformation fo
 The transformed data still shows no constant mean, even if it has a way better shape than the original data. Thus, we consider the usage of the \textit{diff} operator, simple and at lag 168. Interestingly, the analysis of ACF and PACF plots hints to similar models to the Uccle station: 
 $\mathrm{ARIMA}(0,1,0)(0,1,1)_{168}$ and $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$.
 
-In this case, the employment of \textit{auto.arima} stepwise methodology does not lead to any useful model, since it obtains $\mathrm{AICc}=\inf$ for the two manually-chosen models, that have an AICc value around -84.500, while the best model found by that methodology has an AICc around -81.000. This can be caused by approximation errors\footnote{The \textit{auto.arima} methodology was used only with initial approximation, due to high computing time}, as we supposed earlier.
+In this case, the employment of \textit{auto.arima} stepwise methodology does not lead to any useful model, since it obtains $\mathrm{AICc}=\inf$ for the two manually-chosen models, that have an AICc value around -84.500, while the best model found by that methodology has an AICc around -81.000. This can be caused by approximation errors\footnote{The \textit{auto.arima} methodology was only used with initial approximation, due to high computing time.}, as we supposed earlier.
 
 The analysis of ACF/PACF plots of the residuals from both models do not lead to any new model but, as with the Uccle station, we can notice a clear 24 hours periodicity.
 
@@ -492,15 +507,15 @@ Analytically, we have quite a difference between the two models in terms of adhe
 	\item $\mathrm{ARIMA}(0,1,1)(0,1,1)_{168}$: $\approx98\%$ of data is in the $80\%$ CI and $\approx99\%$ in the $95\%$ CI
 	\item $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$: $\approx73\%$ of data is in the $80\%$ CI and $\approx89\%$ in the $95\%$ CI
 \end{itemize}
-As we see, the first model over-generalises the variability, while the latter seems more precise, even if losing some information. Also considering the MAPE on the test set, the latter model fits the data better with a $16\%$ error, instead of a $18\%$.
+As we see, the first model over-generalises the variability, while the latter seems more precise, even if losing some information. Also considering the MAPE on the test set, the latter model fits the data better with a $16\%$ error, instead of the $18\%$ for the first model.
 
-Thus, we can select the $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ model on the Box-Cox($\lambda\approx-1$)-transformed data, still being aware of the missed 24 hours seasonality, similarly to the Uccle station.
+Thus, we can select the $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ model on the Box-Cox($\lambda\approx-1$) transformed data, still being aware of the missed 24 hours seasonality, similarly to the Uccle station.
 
 %\subsubsection{MSTL}
 
 \section{Conclusion}
 \subsection{Lockdown influence}
-Even if the two models have the same order, they cannot be directly compared, for the Membach model works after a transformation pass.
+Even if the two models have the same order, they cannot be directly compared using the Information Criteria, for the Membach model works after a transformation pass, and they are fitted from different data.
 
 We can still compare how the seasonalities differ with respect with each original dataset and between each other. We extract the seasonalities for each station highlighting the standard deviation confidence band for an estimated error of 67\%. This estimation lies on the assumption that values for each single hour in the hourly/weekly seasonality is Normally distributed, a slightly different assumption that is not necessarily refuted by the already seen Q-Q plots.
 
@@ -531,7 +546,7 @@ Yet, it is useful to notice that the weekly seasonalities include a possibly int
 
 
 \subsection{Limitations and future works}
-The main limitations of this projects that we can identify are: multiple seasonalities and Normality assumption.
+The main problems of this projects that we identified are multiple seasonalities and the Normality assumption.
 
 The tested models do not effectively include both daily and weekly seasonalities, even if initially we thought so. Also they cannot include the apparent yearly seasonality, mainly because of the short timeseries.
 To overcome this limitation, we could try different models, also ARIMA-based, that can estimate multiple seasonalities. The first that we tested models seasonalites through Fourier terms. The main problem that lead us not to go further with that approach is that our seasonalities cannot be expressed by a combination of few sine and cosine curves. This requires a high number of curves to estimate, that requires an heavy computational power.
