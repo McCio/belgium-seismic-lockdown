@@ -602,6 +602,7 @@ plot_grid(
   autoplot(ts(season.168$trend, frequency=168)) + labs(title="Trend", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(l=4, b=-6, unit="pt")),
   autoplot(ts(season.168$figure, frequency=1)) + labs(title="Weekly seasonality", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(r=10, b=-6, unit="pt")),
   autoplot(aggregated-season.24$seasonal-season.168$seasonal-season.168$trend) + labs(title="Residuals", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(t=-6, b=-6, unit="pt")),
+  autoplot(season.168$figure + rep(season.24$figure, 7)) + labs(title="Weekly seasonality (sum)", cex=0.7) + ylab("") + xlab("") + theme(plot.margin=margin(r=10, b=-6, unit="pt")),
   nrow = 3,
   greedy = T)
 
