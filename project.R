@@ -27,9 +27,9 @@ print_dec <- function(x, decimals=2) trimws(format(round(x, decimals), nsmall=de
 
 # We define some variables that identify the dataset. Only the row about the wanted dataset should be run
 # UCCS
-domain <- c(-350000,350000); pattern <- "UCCS.*\\.csv"; name <- "UCCS"; description <- "Uccle, Bruxelles"; proj_file <- 'proj.uccs.RData'
+domain <- c(-350000,350000); pattern <- "UCCS-.*\\.csv"; name <- "UCCS"; description <- "Uccle, Bruxelles"; proj_file <- 'proj.uccs.RData'
 # MEMS
-domain <- c(-7200,7200); pattern <- "MEMS.*\\.csv"; name <- "MEMS"; description <- "Membach"; proj_file <- 'proj.mems.RData'
+domain <- c(-7200,7200); pattern <- "MEMS-.*\\.csv"; name <- "MEMS"; description <- "Membach"; proj_file <- 'proj.mems.RData'
 
 # If the corresponding RData file is present, we load it mainly to avoid refitting all models
 if (exists("proj_file") & file.exists(proj_file)) {

@@ -15,7 +15,7 @@ output:
 
 ```{r set mems, include=FALSE}
 # MEMS
-domain <- c(-7200,7200); pattern <- "MEM.*\\.csv"; name <- "MEM"; description <- "Membach"; proj_file <- 'proj.mems.RData'
+domain <- c(-7200,7200); pattern <- "MEMS-.*\\.csv"; name <- "MEM"; description <- "Membach"; proj_file <- 'proj.mems.RData'
 ```
 
 ```{r project, child='project.Rmd'}
