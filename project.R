@@ -52,6 +52,7 @@ cat("Domain values:", domain[1], "to", domain[2], "nm\n")
 cat("Data from", format.POSIXct(min(seis$utc_second), "%Y-%m-%d %H:%M:%S"), "to", format.POSIXct(max(seis$utc_second), "%Y-%m-%d %H:%M:%S"), "\n")
 
 
+
 # As a first step, we remove all values out of domain, and all invalid values: (-1,1) and (0,0) pairs
 # This is done following these steps:
 # - locate the values through boolean arrays
@@ -354,3 +355,91 @@ dec.addi <- decompose(seasonality.aggregate(seis.h.ts))
 autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period)) + xlab(seasonality.xlab)
 
 
+
+# We now apply three different filters to check which one behaves better
+# since we are going to compare the results with the decomposed trend, we will apply the filters on the missing values-free dataset
+
+# First we apply a simple linear MA filter
+p <- floor(seasonality.period/2)
+weights <- rep(1/(2*p+1), times=2*p+1)
+trend <- stats::filter(seasonality.aggregate(seis.h.train), sides=2, filter = weights)
+plots <- show_overlap_and_diff(
+  dec.addi$trend, trend, xlab=seasonality.xlab,
+  base.desc = "additive decomposition trend",
+  compare.desc = paste0("linear filtered trend with p=", p),
+  overlap.ylab = "Trend (nm)",
+  diff.title = "Difference between trends",
+  diff.ylab = "nm", diff.ylab.sec="% over trend span"
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+# Then we apply Spencer's 15-points weights MA filter
+weights.s <- c(-3,-6,-5,3,21,46,67)
+weights.s <- c(weights.s, 74, rev(weights.s))
+weights.s <- weights.s/sum(weights.s)
+trend.s <- stats::filter(seasonality.aggregate(seis.h.train), side=2, filter=weights.s)
+plots <- show_overlap_and_diff(
+  dec.addi$trend, trend.s, xlab=seasonality.xlab,
+  base.desc = "additive decomposition trend",
+  compare.desc = "Spencer's 15-point MA",
+  overlap.ylab = "Trend (nm)",
+  diff.title = "Difference between trends",
+  diff.ylab = "nm", diff.ylab.sec="% over trend span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+# Finally, we apply the seasonality-gnostic MA filter
+f <- seasonality.period
+weights.s <- c(0.5, rep(1,f-1), 0.5)/f
+trend.s <- stats::filter(seasonality.aggregate(seis.h.train), side=2, filter=weights.s)
+plots <- show_overlap_and_diff(
+  dec.addi$trend, trend.s, xlab=seasonality.xlab,
+  base.desc = "additive decomposition trend",
+  compare.desc = paste0("shift-filtered trend with f=", f),
+  overlap.ylab = "Trend (nm)",
+  diff.title = "Difference between trends",
+  diff.ylab = "nm", diff.ylab.sec="% over trend span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+
+
+# We choose to keep the trend obtained from the seasonality-gnostic filter
+# Then, we extract the 168-hours seasonality figure (and we repeat it for the whole dataset)
+# using the mean-over-period technique.
+detrended <- seasonality.aggregate(seis.h.train)-trend.s
+detrended <- window(detrended, end = c(end(detrended)[1], seasonality.period), extend=T)
+mat <- t(matrix(data = detrended, nrow = seasonality.period))
+seasonality.figure <- as.ts(colMeans(mat, na.rm = T))
+seasonality <- rep(seasonality.figure, length(detrended)/length(seasonality.figure))[1:length(trend.s)]
+plots <- show_overlap_and_diff(
+  dec.addi$figure, seasonality.figure, xlab=seasonality.xlab,
+  base.desc = "additive decomposition",
+  compare.desc = paste0("mean-over-period after removal of shift-filtered trend with f=", f),
+  overlap.ylab = "Seasonality (nm)",
+  diff.title = paste0("Difference between seasonalities (f=", seasonality.period, ")"),
+  diff.ylab = "nm", diff.ylab.sec="% over seasonality span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+
+
+# Then, we can extract the residuals
+residuals <- seasonality.aggregate(seis.h.train) - trend.s - seasonality
+plots <- show_overlap_and_diff(
+  dec.addi$random, residuals, xlab=seasonality.xlab,
+  base.desc = "additive decomposition",
+  compare.desc = paste0("mean-over-period after removal of shift-filtered trend with f=", f),
+  overlap.ylab = "Residuals (nm)",
+  diff.title = paste0("Difference between residuals (f=", seasonality.period, ")"),
+  diff.ylab = "nm", diff.ylab.sec="% over residuals span",
+  diff.ylab.sec.accuracy = .01
+)
+plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+
+
+# After that first extraction, we 
