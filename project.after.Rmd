@@ -28,8 +28,8 @@ if (!exists("final.forecast")) {
 cat("\n")
 plotting.model <- final.model
 plotting.forecast <- final.forecast
-cat("AIC =",plotting.model$aic, "\n")
-cat("AICc =",plotting.model$aicc, "\n")
+print(plotting.model)
+print(autoplot(plotting.model) + labs(subtitle = plotting.forecast$method))
 checkresiduals(plotting.model)
 residuals.acf <- autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*4)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))
 residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*4)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))

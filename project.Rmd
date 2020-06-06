@@ -662,28 +662,20 @@ seis.h.train %>% diff() %>% diff(lag=24) %>% diff(lag=168) %>% ggtsdisplay(lag.m
 
 ```{r diffs/d168-acf-pacf}
 plot_grid(
-  seis.h.train %>% diff(lag=168) %>%  acf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
-  ,
-  seis.h.train %>% diff(lag=168) %>%  acf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
-  ,
-  seis.h.train %>% diff(lag=168) %>% pacf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
-  ,
-  seis.h.train %>% diff(lag=168) %>% pacf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
-  ,
+  seis.h.train %>% diff(lag=168) %>%  acf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous(),
+  seis.h.train %>% diff(lag=168) %>%  acf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous(),
+  seis.h.train %>% diff(lag=168) %>% pacf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous(),
+  seis.h.train %>% diff(lag=168) %>% pacf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous(),
   nrow = 2
 )
 ```
 
 ```{r diffs/d-d168-acf-pacf}
 plot_grid(
-  seis.h.train %>% diff() %>% diff(lag=168) %>%  acf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
-  ,
-  seis.h.train %>% diff() %>% diff(lag=168) %>%  acf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
-  ,
-  seis.h.train %>% diff() %>% diff(lag=168) %>% pacf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
-  ,
-  seis.h.train %>% diff() %>% diff(lag=168) %>% pacf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous()
-  ,
+  seis.h.train %>% diff() %>% diff(lag=168) %>%  acf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous(),
+  seis.h.train %>% diff() %>% diff(lag=168) %>%  acf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous(),
+  seis.h.train %>% diff() %>% diff(lag=168) %>% pacf(lag.max = 24,    plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous(),
+  seis.h.train %>% diff() %>% diff(lag=168) %>% pacf(lag.max = 168*4, plot = F, na.action = na.pass) %>% autoplot() + labs(title = NULL) + scale_x_continuous(),
   nrow = 2
 )
 ```

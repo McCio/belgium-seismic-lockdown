@@ -18,7 +18,7 @@ output:
 
 ```{r set uccs, include=FALSE}
 # UCCS
-domain <- c(-350000,350000); pattern <- "UCCS-.*\\.csv"; name <- "UCCS"; description <- "Uccle, Bruxelles"; proj_file <- 'proj.uccs.RData'
+domain <- c(-350000,350000); pattern <- "UCCS-.+\\.csv"; name <- "UCCS"; description <- "Uccle, Bruxelles"; proj_file <- 'proj.uccs.RData'
 ```
 
 ```{r project, child='project.Rmd'}
@@ -48,23 +48,7 @@ to_test <- list(
 if (!exists("models")){
   models <- list()
 }
-for (model in to_test) {
-  # model <- c(4,1,2,0,1,0)
-  fit.name <- paste0("fit", paste0(model, collapse = ""))
-  forecast.name <- paste0("forecast", paste0(model, collapse = ""))
-  cat("SARIMA(", paste0(model[1:3], collapse = ","), ")(", paste0(model[4:6], collapse = ","), ")[", frequency(seis.h.train), "]", sep = "")
-  if (!(fit.name %in% names(models))) {
-    cat(" fitting...")
-    models[[fit.name]] <- Arima(seis.h.train, model[1:3], model[4:6])
-    cat("DONE")
-  }
-  if (!(forecast.name %in% names(models))) {
-    cat(" forecasting...")
-    models[[forecast.name]] <- forecast(models[[fit.name]], h=168*18)
-    cat("DONE")
-  }
-  cat("\n")
-}
+
 #models[["fitauto"]] <- auto.arima(seis.h.train, D=1, approx=F, trace = T)
 #models[["forecastauto"]] <- forecast(models[["fitauto"]], h=168*18)  
 #models[["fit311010"]] <- models[["fitauto"]]
@@ -81,48 +65,64 @@ for (model in to_test) {
   # model <- c(4,1,2,0,1,0)
   fit.name <- paste0("fit", paste0(model, collapse = ""))
   forecast.name <- paste0("forecast", paste0(model, collapse = ""))
-  cat("SARIMA(", paste0(model[1:3], collapse = ","), ")(", paste0(model[4:6], collapse = ","), ")[", frequency(seis.h.train), "]\n", sep = "")
-    if ((fit.name %in% names(models))) {  if ((forecast.name %in% names(models))) {
-    plotting.model <- models[[fit.name]]
-    plotting.forecast <- models[[forecast.name]]
-    cat("AIC =",plotting.model$aic, "\n")
-    checkresiduals(plotting.model)
-    residuals.acf <- autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
-    residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*5)) + scale_x_continuous() + labs(title = paste0("Series: residuals of ", plotting.forecast$method))
-    print(plot_grid(residuals.acf, residuals.pacf, nrow=2))
-    print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original"))
-    plots <- show_overlap_and_diff(
-      seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
-      base.desc = "training set",
-      compare.desc = paste0("refit with ", plotting.forecast$method),
-      overlap.ylab = "Mean hourly movement (nm)",
-      diff.title = "Difference between ts",
-      diff.ylab = "nm", diff.ylab.sec="%",
-      diff.ylab.sec.accuracy = .01
-    )
-    print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
+  cat("SARIMA(", paste0(model[1:3], collapse = ","), ")(", paste0(model[4:6], collapse = ","), ")[", frequency(seis.h.train), "]", sep = "")
+  if (!(fit.name %in% names(models))) {
+    cat(" fitting...")
+    models[[fit.name]] <- Arima(seis.h.train, model[1:3], model[4:6])
+    cat("DONE")
+  }
+  if (!(forecast.name %in% names(models))) {
+    cat(" forecasting...")
+    models[[forecast.name]] <- forecast(models[[fit.name]], h=168*18)
+    cat("DONE")
+  }
+  cat("\n")
+  plotting.model <- models[[fit.name]]
+  plotting.forecast <- models[[forecast.name]]
+  print(plotting.model)
+  print(autoplot(plotting.model) + labs(subtitle = plotting.forecast$method))
+  checkresiduals(plotting.model)
+  residuals.acf <- autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*4)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))
+  residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*4)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))
+  print(plot_grid(residuals.acf, residuals.pacf, nrow=2))
+  print(plot_grid(
+    autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=24)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method)),
+    residuals.acf,
+    autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=24)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method)),
+    residuals.pacf,
+    nrow = 2
+  ))
+  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)"))
+  plots <- show_overlap_and_diff(
+    seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
+    base.desc = "training set",
+    compare.desc = paste0("refit with ", plotting.forecast$method),
+    overlap.ylab = "Mean hourly movement (nm)",
+    diff.title = "Difference between ts",
+    diff.ylab = "nm", diff.ylab.sec="%",
+    diff.ylab.sec.accuracy = .01
+  )
+  print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
+  
+  cat("Test set inside the CI\n")
+  cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < seis.h.test & seis.h.test < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
+  cat("95% CI \t ", print_dec(mean(plotting.forecast$lower[,2] < seis.h.test & seis.h.test < plotting.forecast$upper[,2], na.rm = T)*100), "%\n")
+
+  plots <- show_overlap_and_diff(
+    seis.h.test, plotting.forecast$mean, xlab=seasonality.xlab,
+    base.desc = "test set",
+    compare.desc = paste0("forecast with ", plotting.forecast$method),
+    overlap.ylab = "Mean hourly movement (nm)",
+    diff.title = "Difference between ts",
+    diff.ylab = "nm", diff.ylab.sec="%",
+    diff.ylab.sec.accuracy = .01
+  )
+  print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
     
-    cat("Test set inside the CI\n")
-    cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < seis.h.test & seis.h.test < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
-    cat("95% CI \t ", print_dec(mean(plotting.forecast$lower[,2] < seis.h.test & seis.h.test < plotting.forecast$upper[,2], na.rm = T)*100), "%\n")
-
-    plots <- show_overlap_and_diff(
-      seis.h.test, plotting.forecast$mean, xlab=seasonality.xlab,
-      base.desc = "test set",
-      compare.desc = paste0("forecast with ", plotting.forecast$method),
-      overlap.ylab = "Mean hourly movement (nm)",
-      diff.title = "Difference between ts",
-      diff.ylab = "nm", diff.ylab.sec="%",
-      diff.ylab.sec.accuracy = .01
-    )
-    print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
-
-    print(accuracy(plotting.forecast, seis.h.test))
-    # qqPlot(plotting.model$residuals, main = paste0("Q-Q plot for ", plotting.forecast$method), xlab = "residuals")
-    print(gg_qqplot(plotting.model$residuals) + 
-        labs(title=paste0("Q-Q plot for ", plotting.forecast$method, " residuals")) + ylab("Residuals quantiles")
-    )
-  }}
+  print(accuracy(plotting.forecast, seis.h.test))
+  print(gg_qqplot(plotting.model$residuals) + 
+      labs(title=paste0("Q-Q plot for ", plotting.forecast$method, " residuals")) + ylab("Residuals quantiles")
+  )
 }
 
 ```
