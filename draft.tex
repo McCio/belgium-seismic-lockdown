@@ -150,6 +150,8 @@ Thanks to the recent COVID-19 outbreak worldwide, we currently have data about m
 Inspired by an article published during the initial phases of the Belgium-wide lockdown \cite{NatureCoronavirusSeismic}, we want to assess whether the lockdown period can be correlated with a visible change in seismic activity.
 It is important to notice that some industrial events, such as mine explosions, are already mapped by seismologic institutions since they interfere with seismic surveys \cite{OtherSeismicEvents}. Such events are sometimes comparable with natural seismic events, depending on the distance from the seismograph.
 
+The correct estimation of a background noise, correlated or not with human activity, could help institutions to better isolate less prominent earthquakes and similar events from the seismic data. This could result in better understanding of the frequency of earthquakes and by studying their more-precise evolution over time.
+
 \subsubsection{Data source and description}
 The Royal Observatory of Belgium (ROB) gathers and publishes \cite{RoyalDataPolicy,Data20200402} data about vertical ground displacement from 9 stations through the country, linking them to seismic events whenever possible \cite{DataEvents20200402}. They also offer a data visualization tool for the same data \cite{DataVisualization20200402}.
 
@@ -297,6 +299,11 @@ This initial division demostrated to be computationally heavy while fitting some
 Given those issues, we choose the training/testing sets to hold 52/18 weeks: this is the greater train-to-test ratio we deem usable ($\approx 75\%/25\%$), while maintaining computational feasibility, and we hope it will render the possible yearly seasonality less intrusive.
 
 
+Some R commands cannot handle timeseries with missing values, but as we have seen both stations datasets include missing values.
+Also, please note that we are going to have a timeseries object indexed by weeks, so that it contains the 168 hours between each integer index.
+Since we know that the longest missing values series is 90 hours long, we can apply a simple completion strategy for serving those commands a filled timeseries: we will substitute missing values with the mean of the week they are in; in R terms \texttt{na.aggregate(x, floor)}.
+
+
 \subsubsection{Decomposition}
 In order to decompose our dataset into trend and seasonality(-ties) components, we followed these steps:
 \begin{enumerate}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
@@ -306,6 +313,25 @@ In order to decompose our dataset into trend and seasonality(-ties) components, 
 \end{enumerate}
 While doing so, we tested different smoothing filters: simple filter (p=seasonality), Spencer's 15-point filter and MA smoothing filter (f=seasonality). Since they do not produce particularly different seasonalities, we choose to keep the results obtained by applying the MA smoothing filter, for its significance in terms of seasonally adjusted data.
 
+
+\begin{figure}[h]
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/extract both 24 and 168-1.pdf}
+		\caption{Uccle station}
+		\label{fig:decomposed:uccs}
+	\end{subfigure}
+	\begin{subfigure}{.5\linewidth}
+		\includegraphics[width=\linewidth]{project.mems_files/figure-latex/extract both 24 and 168-1.pdf}
+		\caption{Membach station}
+		\label{fig:decomposed:mems}
+	\end{subfigure}
+	\begin{center}
+		\caption{Timeseries decomposition}{\small Only the second method results are shown for clarity}
+		\label{fig:decomposed}
+	\end{center}
+\end{figure}
+
+
 Since the periodgrams suggested the presence of two significative periodicities, we also tested the extraction of both corresponding seasonalities:
 \begin{enumerate}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item Apply the MA smoothing filter (f=24) on the dataset to extract the trend component
@@ -313,7 +339,7 @@ Since the periodgrams suggested the presence of two significative periodicities,
 	\item Remove the 24-hour seasonal components to obtain a deseasoned dataset
 	\item Apply the MA smoothing filter (f=168) on the deseasoned dataset to extract the updated trend component
 	\item Remove the trend from the already deseasoned dataset and extract the 168-hour seasonal figure using the local mean method
-	\item Repeat steps 3-5 steps alternating the 168/24 seasonalities until convergence (2 to 3 cycles should be enough)
+	\item Repeat steps 1-5 using the last deseasoned dataset until convergence (2-3 cycles)
 	\item Removing the last fitted trend and the two seasonalities we obtain the final residuals
 \end{enumerate}
 
@@ -341,29 +367,7 @@ In \figurename~\ref{fig:direct-multi-seasonality} we see both approaches applied
 \end{itemize}
 Given in particular the second property, we will only use the 168-hours seasonality while fitting our models, for both the stations.
 
-In \figurename~\ref{fig:decomposed} we see the decomposition results. While data from Uccle station have a clear significativity of both trend and seasonalities, data from Membach could seem not significant. Still, if we notice that the main timeseries lies between values of 0 and 100, we can find out that around half of the value will be composed by the trend, a 30\% by the joined seasonalities component, and the remaining value by the residuals. We will need to better handle the spikes starting from the middle of our dataset.
-
-\begin{figure}[h]
-	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/extract both 24 and 168-1.pdf}
-		\caption{Uccle station}
-		\label{fig:decomposed:uccs}
-	\end{subfigure}
-	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=\linewidth]{project.mems_files/figure-latex/extract both 24 and 168-1.pdf}
-		\caption{Membach station}
-		\label{fig:decomposed:mems}
-	\end{subfigure}
-	\begin{center}
-		\caption{Timeseries decomposition}{\small Only the second method results are shown for clarity}
-		\label{fig:decomposed}
-	\end{center}
-\end{figure}
-
-
-Some R commands cannot handle timeseries with missing values, but as we have seen both stations datasets include missing values.
-Also, please note that we are going to have a timeseries object indexed by weeks, so that it contains the 168 hours between each integer.
-Since we know that the longest missing values series is 90 hours long, we can apply a simple completion strategy for serving those commands a filled timeseries: we will substitute missing values with the mean of the week they are in; in R terms \texttt{na.aggregate(x, floor)}.
+In \figurename~\ref{fig:decomposed} we see the double decomposition results. While data from Uccle station have a clear significativity of both trend and seasonalities, data from Membach could seem not significant. Still, if we notice that the main timeseries lies between values of 0 and 100, we can find out that around half of the value will be composed by the trend, a 30\% by the joined seasonalities component, and the remaining value by the residuals. We will need to better handle the spikes that start from the middle of that dataset.
 
 
 \section{Parameter estimation}
@@ -474,7 +478,7 @@ Since the $\lambda$ value approximately simplifies the Box-Cox transformation fo
 	\end{center}
 \end{figure}
 
-The transformed data still shows no constant mean, even if it has a way better shape than the original data. Thus, we consider the usage of the \textit{diff} operator, simple and at lag 168. Interestingly, the analysis of ACF and PACF plots hints to similar models to the Uccle station: 
+The transformed data still shows no constant mean, even if it has a way better shape than the original data, confirmed by the Q-Q plot (\figurename~\ref{fig:mems:box-cox:qq}). Thus, we consider the usage of the \textit{diff} operator, simple and at lag 168. Interestingly, the analysis of ACF and PACF plots hints to similar models to the Uccle station: 
 $\mathrm{ARIMA}(0,1,0)(0,1,1)_{168}$ and $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$.
 
 In this case, the employment of \textit{auto.arima} stepwise methodology does not lead to any useful model, since it obtains $\mathrm{AICc}=\inf$ for the two manually-chosen models, that have an AICc value around -84.500, while the best model found by that methodology has an AICc around -81.000. This can be caused by approximation errors\footnote{The \textit{auto.arima} methodology was only used with initial approximation, due to high computing time.}, as we supposed earlier.
@@ -517,7 +521,7 @@ Thus, we can select the $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ model on the Box-Co
 \subsection{Lockdown influence}
 Even if the two models have the same order, they cannot be directly compared using the Information Criteria, for the Membach model works after a transformation pass, and they are fitted from different data.
 
-We can still compare how the seasonalities differ with respect with each original dataset and between each other. We extract the seasonalities for each station highlighting the standard deviation confidence band for an estimated error of 67\%. This estimation lies on the assumption that values for each single hour in the hourly/weekly seasonality is Normally distributed, a slightly different assumption that is not necessarily refuted by the already seen Q-Q plots.
+We can still compare how the seasonalities differ with respect with each original dataset and between each other. We extract the seasonalities for each station highlighting the standard deviation confidence band for an estimated error of 67\%. This interval estimation lies on the assumption that values for each single hour in the hourly/weekly seasonality is Normally distributed, a slightly different assumption that is not necessarily refuted by the already seen Q-Q plots.
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
