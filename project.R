@@ -1,12 +1,12 @@
-
+# Inlcuding all used libraries
 library(stringi) # %s+%
-library(lubridate) # floor_date
+library(lubridate) # date shorthands (floor_date, ...)
 library(xts) # zoo
 library(fpp) # auto.arima
 library(ggplot2) # plots
 library(ggrepel) # for nicer labels on ggplot
 library(cowplot) # for plot_grid
-library(qqplotr) # qqplot with ggplot
+library(qqplotr) # Q-Q plot with ggplot
 library(spec) # for periodgram
 library(tidyverse) # map_df, read_csv, group_by, summarize...
 library(tsbox) # https://cran.r-project.org/web/packages/tsbox/vignettes/tsbox.html
@@ -17,31 +17,28 @@ print_dec <- function(x, decimals=2) trimws(format(round(x, decimals), nsmall=de
 
 
 # If needed, set working directory. The folder structure inside it should contain
-# - csv/
-#   - UCCS*.csv files
-#   - MEMS*.csv files
-# - proj.*.RData (optional)
+# - proj.data.RData
+# - proj.mems.RData (optional)
+# - proj.uccs.RData (optional)
 # setwd("/media/data/Documents/Uni/spatiotemp/villalobos/project/")
+# Load the datasets. proj.data.RData contains seis.uccs and seis.mems data.frame objects
+load('proj.data.RData')
 
 
 
 # We define some variables that identify the dataset. Only the row about the wanted dataset should be run
 # UCCS
-domain <- c(-350000,350000); pattern <- "UCCS-.*\\.csv"; name <- "UCCS"; description <- "Uccle, Bruxelles"; proj_file <- 'proj.uccs.RData'
+seis <- seis.uccs; domain <- c(-350000,350000); name <- "UCCS"; description <- "Uccle, Bruxelles"; proj_file <- 'proj.uccs.RData'
 # MEMS
-domain <- c(-7200,7200); pattern <- "MEMS-.*\\.csv"; name <- "MEMS"; description <- "Membach"; proj_file <- 'proj.mems.RData'
-
+seis <- seis.mems; domain <- c(-7200,7200); name <- "MEMS"; description <- "Membach"; proj_file <- 'proj.mems.RData'
 # If the corresponding RData file is present, we load it mainly to avoid refitting all models
 if (exists("proj_file") & file.exists(proj_file)) {
   load(proj_file)
 }
+# If high RAM usage is noticed, it is possible to remove the unused station data
+# remove(seis.uccs)
+# remove(seis.mems)
 
-
-
-# Load all csv files in the folder corresponding to the defined pattern, station-dependant
-seis <-
-  list.files(path="csv/", pattern=pattern) %>%
-  map_df(~read_csv("csv/" %s+% .))
 
 
 
@@ -211,7 +208,7 @@ gc()
 
 
 # We will now start working with the dataset as a timeseries object.
-# In order to do so, we define the function build_ts to accomodate the different usages we will need for ts objects build, using ts_box functions
+# In order to do so, we define the function build_ts to accomodate the different usages we will need for ts objects build, using ts_box functions for simplicity
 build_ts <- function(dset, periods=NULL, start=NULL, end=NULL, force_ms=T) {
   # first, we build a zoo ts, that better handles dates with granularity under the day
   dset.ts <- ts_zoo(dset)
@@ -244,7 +241,7 @@ build_ts <- function(dset, periods=NULL, start=NULL, end=NULL, force_ms=T) {
 
 # To analytically select the period, we follow these steps, using the periodgram
 # Firstly, we compute the periodgram itself on the MA-smoothed dataset, creating the plot with ggplot so that we can more easily highlight some points
-min_h_seasonality <- 24
+min_h_seasonality <- 24  # use this to see the values highlighted higher than 168 hours
 min_h_seasonality <- 2
 pgram <- spec.pgram(stats::filter(build_ts(seis.h, start = seis.train.start, end = seis.train.end), side=2, filter=c(0.5, rep(1,min_h_seasonality-1), 0.5)/min_h_seasonality),
                     detrend=F, demean=T, na.action=na.aggregate, plot=F)
@@ -356,6 +353,10 @@ autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitl
 
 
 
+#################### Decomposition ####################
+
+
+
 # We now apply three different filters to check which one behaves better
 # since we are going to compare the results with the decomposed trend, we will apply the filters on the missing values-free dataset
 
@@ -442,6 +443,10 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 
 
+#################### Multi seasonality extraction ####################
+
+
+
 # After that single extraction, we try extracting two seasonalities at once.
 # Since the procedure is fixed, we define a couple of functions to better handle it.
 # trend.s_compute only apply the seasonality-gnostic symmetric MA filter
@@ -521,6 +526,10 @@ plots <- show_overlap_and_diff(
   diff.ylab.sec.accuracy = .01
 )
 plot_grid(plots[[1]], plots[[2]], nrow = 2)
+
+
+
+#################### Parameters Estimation START ####################
 
 
 
