@@ -525,8 +525,8 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
 
 # We now proceed to find the needed transformations for our dataset to choose the order of the model and estimate the parameters
-# Since this must be done specifically for each of the two datasets, we start with what we need for the Uccle station, then we proceed with the Membach station.
-# Please note that the variable names are the same, so the Membach-specific code will overwrite and clash with the Uccle-specific code.
+# When specific choices and checks are done for any station, we will highlight it.
+# Please note that the variable names are normally the same, so the Membach-specific code will overwrite and clash with the Uccle-specific code.
 # If at the start the Uccle data (UCCS) was chosen, then follow the code delimited for that station and skip the Membach-specific.
 # Follow and skip the other code when Membach data (MEMS) was chosen at the start.
 
@@ -551,11 +551,7 @@ gg_qqplot <- function(dataset) {
 
 
 
-#################### Uccle station START ####################
-
-
-
-# We check possible transformations, without obtaining significant better distributions
+# We check possible transformations
 month.starts <- seq.POSIXt(from=floor_date(seis.train.start, 'month'), to=ceiling_date(seis.train.end, 'month'), by = "1 month")
 hours.from.train.start <- as.numeric(month.starts-seis.train.start)*24+168
 # base dataset
@@ -582,6 +578,15 @@ gghistogram(train.bc, add.normal = T) + xlab("mean hourly movement (nm)") + labs
 gg_qqplot(train.bc) + 
   labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
 
+
+
+
+
+
+#################### Uccle station START ####################
+# For Uccle dataset, no transformation have significant benefit. So we proceed with non transformed data
+# We set the chosen Box-Cox transformation lambda to NULL to have more common code between stations
+chosen.lambda <- NULL
 
 
 # We check the behaviour of ACF and PACF by applying different diff operators
@@ -606,7 +611,6 @@ plot_grid(
 ) # from this we will try ARIMA(0,1,0)(0,1,1)[168]
 
 
-
 # Next, we fit these models and some others suggested by different auto.arima calls and ACF/PACF analysis
 to_test <- list(
   c(0,1,0,0,1,1),  # hint from acf/pacf with diff/diff(lag=168)
@@ -619,126 +623,16 @@ to_test <- list(
   c(4,1,2,0,1,0),  # hint from auto.arima(d=1, D=1, max.p=5, max.q=2, max.P=5, max.Q=2, max.order=10)
   c(4,1,2,0,1,1)  # after previous hint then ACF + PACF
 )
-# this check, as similar code inside the loop, are meant for saving fitted models in an .RData for not refitting them each time
-if (!exists("models")){
-  models <- list()
-}
-# for each model orders, we fit the model, forecast the 18 test weeks, and then we plot and print various data for model evaluation
-for (model in to_test) {
-  # model <- c(4,1,2,0,1,0)
-  fit.name <- paste0("fit", paste0(model, collapse = ""))
-  forecast.name <- paste0("forecast", paste0(model, collapse = ""))
-  cat("SARIMA(", paste0(model[1:3], collapse = ","), ")(", paste0(model[4:6], collapse = ","), ")[", frequency(seis.h.train), "]", sep = "")
-  # fit the model if it was not fitted before
-  if (!(fit.name %in% names(models))) {
-    cat(" fitting...")
-    models[[fit.name]] <- Arima(seis.h.train, model[1:3], model[4:6])
-    cat("DONE")
-  }
-  # forecast the test period if it was not forecasted already
-  if (!(forecast.name %in% names(models))) {
-    cat(" forecasting...")
-    models[[forecast.name]] <- forecast(models[[fit.name]], h=168*18)
-    cat("DONE")
-  }
-  cat("\n")
-  plotting.model <- models[[fit.name]]
-  plotting.forecast <- models[[forecast.name]]
-  # show model parameters and AIC/AICc/BIC values
-  print(plotting.model)
-  # plot overlap/difference with train data
-  plots <- show_overlap_and_diff(
-    seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
-    base.desc = "training set",
-    compare.desc = paste0("refit with ", plotting.forecast$method),
-    overlap.ylab = "Mean hourly movement (nm)",
-    diff.title = "Difference between ts",
-    diff.ylab = "nm", diff.ylab.sec="%",
-    diff.ylab.sec.accuracy = .01
-  )
-  print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
-  # check how residuals behave as distribution and as acf/pacf
-  checkresiduals(plotting.model)
-  print(gg_qqplot(plotting.model$residuals) + 
-          labs(title=paste0("Q-Q plot for ", plotting.forecast$method, " residuals")) + ylab("Residuals quantiles")
-  )
-  residuals.acf <- autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*4)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))
-  residuals.pacf <- autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=168*4)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method))
-  print(plot_grid(residuals.acf, residuals.pacf, nrow=2))
-  # also check zoomed residuals acf/pacf for more insights
-  print(plot_grid(
-    autoplot(acf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=24)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method)),
-    residuals.acf,
-    autoplot(pacf(plotting.model$residuals, na.action = na.pass, plot=F, lag.max=24)) + scale_x_continuous() + labs(title = paste0("Residuals of ", plotting.forecast$method)),
-    residuals.pacf,
-    nrow = 2
-  ))
-  # plot forecasts
-  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)"))
-  # print stats about data falling inside 80% and 90% CIs
-  cat("Test set inside the CI\n")
-  cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < seis.h.test & seis.h.test < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
-  cat("95% CI \t ", print_dec(mean(plotting.forecast$lower[,2] < seis.h.test & seis.h.test < plotting.forecast$upper[,2], na.rm = T)*100), "%\n")
-  # plot overlap/difference with test data
-  plots <- show_overlap_and_diff(
-    seis.h.test, plotting.forecast$mean, xlab=seasonality.xlab,
-    base.desc = "test set",
-    compare.desc = paste0("forecast with ", plotting.forecast$method),
-    overlap.ylab = "Mean hourly movement (nm)",
-    diff.title = "Difference between ts",
-    diff.ylab = "nm", diff.ylab.sec="%",
-    diff.ylab.sec.accuracy = .01
-  )
-  print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
-  # print accuracy statistics (different errors, mainly MAPE is considered)
-  print(accuracy(plotting.forecast, seis.h.test))
-}
-# we finally set the chosen model, with Box-Cox corresponding lambda value (NULL since we are not transforming the data)
-chosen.model <- c(2,0,0,0,1,1)
-chosen.lambda <- NULL
-
-
-
 #################### Uccle station END ####################
 
 
 
-# The procedure for the Membach station is quite similar, but for clarity we are going to reproduce the code.
-# The main differences are the initial transformation and ACF/PACF analysis, and then in the models cycle the added parameter lambda to Arima and forecast calls
 
 
 
 #################### Membach station START ####################
-
-
-
-# We check possible transformations, without obtaining significant better distributions
-month.starts <- seq.POSIXt(from=floor_date(seis.train.start, 'month'), to=ceiling_date(seis.train.end, 'month'), by = "1 month")
-hours.from.train.start <- as.numeric(month.starts-seis.train.start)*24+168
-# base dataset
-autoplot(seis.h.train, type="l") +
-  scale_x_continuous(breaks=hours.from.train.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in original scale")
-gghistogram(seis.h.train, add.normal = T) + xlab("mean hourly movement (nm)") + labs(caption = "Data in original scale")
-gg_qqplot(seis.h.train) + 
-  labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = "Data in original scale")
-# log transformation
-autoplot(log(seis.h.train), type="l") +
-  scale_x_continuous(breaks=hours.from.train.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in log-scale")
-gghistogram(log(seis.h.train), add.normal = T) + xlab("mean hourly movement (nm)") + labs(caption = "Data in log-scale")
-gg_qqplot(log(seis.h.train)) + 
-  labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = "Data in log-scale")
-# Box-Cox transformation with auto estimation of lambda by R
-train.bc.lambda <- BoxCox.lambda(seis.h.train)
-train.bc <- BoxCox(seis.h.train, train.bc.lambda)
-autoplot(train.bc, type="l") +
-  scale_x_continuous(breaks=hours.from.train.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
-gghistogram(train.bc, add.normal = T) + xlab("mean hourly movement (nm)") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
-gg_qqplot(train.bc) + 
-  labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
-
+# For Membach dataset, the Box-Cox transformation shows a significantly better behaviour relative to Normality
+chosen.lambda <- train.bc.lambda
 
 
 # We check the behaviour of ACF and PACF by applying different diff operators on the Box-Cox transformed data
@@ -763,7 +657,6 @@ plot_grid(
 ) # from this we will try ARIMA(0,1,0)(0,1,1)[168]
 
 
-
 # Next, we fit these models and some others suggested by ACF/PACF analysis
 to_test <- list(
   c(0,1,0,0,1,1),  # from ACF/PACF of data with diff/diff(lag=168)
@@ -772,7 +665,14 @@ to_test <- list(
   c(2,0,0,0,1,1),  # from ACF/PACF of data with diff(lag=168)
   c(3,0,0,0,1,1)  # after previous + ACF/PACF on residuals
 )
-# this check, as similar code inside the loop, are meant for saving fitted models in an .RData for not refitting them each time
+#################### Membach station END ####################
+
+
+
+
+
+
+# this check, as similar code inside the loop, is meant for saving fitted models in an .RData for not refitting them each time
 if (!exists("models")){
   models <- list()
 }
@@ -785,13 +685,13 @@ for (model in to_test) {
   # fit the model if it was not fitted before
   if (!(fit.name %in% names(models))) {
     cat(" fitting...")
-    models[[fit.name]] <- Arima(seis.h.train, model[1:3], model[4:6], lambda=train.bc.lambda)  # <-- note the added argument lambda=train.bc.lambda
+    models[[fit.name]] <- Arima(seis.h.train, model[1:3], model[4:6], lambda=chosen.lambda)  # <-- lambda=NULL means no Box-Cox transformation
     cat("DONE")
   }
   # forecast the test period if it was not forecasted already
   if (!(forecast.name %in% names(models))) {
     cat(" forecasting...")
-    models[[forecast.name]] <- forecast(models[[fit.name]], h=168*18, lambda=train.bc.lambda)  # <-- note the added argument lambda=train.bc.lambda
+    models[[forecast.name]] <- forecast(models[[fit.name]], h=168*18, lambda=chosen.lambda)  # <-- lambda=NULL means no Box-Cox transformation
     cat("DONE")
   }
   cat("\n")
@@ -846,12 +746,13 @@ for (model in to_test) {
   # print accuracy statistics (different errors, mainly MAPE is considered)
   print(accuracy(plotting.forecast, seis.h.test))
 }
-# we finally set the chosen model, with Box-Cox corresponding lambda value
+
+
+
+# we finally set the chosen model for Uccle
 chosen.model <- c(2,0,0,0,1,1)
-chosen.lambda <- train.bc.lambda
-
-
-
-#################### Membach station END ####################
+# we finally set the chosen model for Membach
+chosen.model <- c(2,0,0,0,1,1)
+# they seem equal, but the chosen.lambda is actually different
 
 
