@@ -765,3 +765,19 @@ chosen.model <- c(2,0,0,0,1,1)
 # they seem equal, but the chosen.lambda is actually different
 
 
+
+#################### Final testing ####################
+# Now we will bring the chosen model to cover all training+test data (ending on 2020-03-01 23:59:59 UTC), and test it for the next 8 weeks (until 2020-04-26 23:59:59 UTC)
+
+
+seis.test.final.start <- seis.test.end + seconds(1)
+seis.test.final.end <- seis.test.final.start + days(7*8) - seconds(1)
+c(seis.train.start, seis.test.final.start, seis.test.final.end)
+
+final.training <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.end, force_ms = T)
+final.testing <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.final.end, force_ms = T)
+final.testing <- window(final.testing, start = c(end(final.training)[1] + 1, 1))
+if (!is.null(chosen.lambda)) {
+  cat(chosen.lambda, BoxCox.lambda(final.training), chosen.lambda == BoxCox.lambda(final.training))
+}
+
