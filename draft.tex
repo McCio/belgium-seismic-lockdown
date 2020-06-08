@@ -450,6 +450,8 @@ The increasing variability also make the percentage of test values falling insid
 	\item $\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$: $\approx98\%$ of data is in the $80\%$ CI and $\approx99\%$ in the $95\%$ CI
 \end{itemize}
 
+Also, ARIMA parameters roots have values within the unit circle for the first two models, while for $\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$ two of the roots fall outside the unit circle, with values of $\approx1.49$ and $\approx1.80$.
+
 Given all these factors, we are confident choosing the $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ model, being aware of the missed 24 hours seasonality.
 
 %\subsubsection{MSTL}
@@ -512,6 +514,8 @@ Analytically, we have quite a difference between the two models in terms of adhe
 	\item $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$: $\approx73\%$ of data is in the $80\%$ CI and $\approx89\%$ in the $95\%$ CI
 \end{itemize}
 As we see, the first model over-generalises the variability, while the latter seems more precise, even if losing some information. Also considering the MAPE on the test set, the latter model fits the data better with a $16\%$ error, instead of the $18\%$ for the first model.
+
+Parameters roots for both models have values within the unit circle.
 
 Thus, we can select the $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ model on the Box-Cox($\lambda\approx-1$) transformed data, still being aware of the missed 24 hours seasonality, similarly to the Uccle station.
 
