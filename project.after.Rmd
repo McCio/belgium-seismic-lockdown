@@ -80,14 +80,17 @@ print(gg_qqplot(plotting.model$residuals) +
 
 
 ```{r seasonalities/seasonplot}
-final.training.24 <- build_ts(final.training, periods = c(24))
-seasonplot(final.training.24/sd(final.training.24, na.rm = T), type="l", col=rainbow(7))
-legend("topleft", legend=weekdays(seis.train.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
-
-
-final.testing.24 <- build_ts(final.testing, periods = c(24))
-seasonplot(final.testing.24/sd(final.testing.24, na.rm = T), type="l", col=rainbow(7))
-legend("topleft", legend=weekdays(seis.test.final.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+before.lockdown.start <- seis.train.start
+before.lockdown.end <- as_datetime('2020-03-14T00:00:00') - seconds(1)
+after.lockdown.start <- as_datetime('2020-03-14T00:00:00')
+after.lockdown.end <- as_datetime('2020-04-26T00:00:00') - seconds(1)
+before.lockdown <- build_ts(seis.h, periods = c(24), start = before.lockdown.start, end = before.lockdown.end, force_ms = T)
+after.lockdown <- build_ts(seis.h, periods = c(24), start = after.lockdown.start, end = after.lockdown.end, force_ms = T)
+# We first check the seasonplots, highlighting different weekdays
+seasonplot(before.lockdown, type="l", col=rainbow(7))
+legend("topleft", legend=weekdays(before.lockdown.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+seasonplot(after.lockdown, type="l", col=rainbow(7)[c(6:7,1:5)])
+legend("topleft", legend=weekdays(after.lockdown.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7)[c(6:7,1:5)], lty=1, cex=0.8)
 
 ```
 
