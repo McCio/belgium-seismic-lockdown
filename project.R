@@ -36,8 +36,8 @@ if (exists("proj_file") & file.exists(proj_file)) {
   load(proj_file)
 }
 # If high RAM usage is noticed, it is possible to remove the unused station data
-# remove(seis.uccs)
-# remove(seis.mems)
+remove(seis.uccs)
+remove(seis.mems)
 
 
 
@@ -354,6 +354,12 @@ autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitl
 
 
 #################### Decomposition ####################
+
+
+
+# We first use the stats::decompose method with default parameters
+dec.addi <- decompose(seasonality.aggregate(seis.h.train))
+autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period)) + xlab(seasonality.xlab)
 
 
 
@@ -801,14 +807,14 @@ cat("\n")
 plotting.model <- final.model
 plotting.forecast <- final.forecast
 # plot forecasts
-print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)"))
+print(plot_forecast(plotting.forecast) + autolayer(final.testing, series="Original") + ylab("Mean hourly movement (nm)"))
 # print stats about data falling inside 80% and 90% CIs
 cat("Test set inside the CI\n")
-cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < seis.h.test & seis.h.test < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
-cat("95% CI \t ", print_dec(mean(plotting.forecast$lower[,2] < seis.h.test & seis.h.test < plotting.forecast$upper[,2], na.rm = T)*100), "%\n")
+cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < final.testing & final.testing < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
+cat("95% CI \t ", print_dec(mean(plotting.forecast$lower[,2] < final.testing & final.testing < plotting.forecast$upper[,2], na.rm = T)*100), "%\n")
 # plot overlap/difference with test data
 plots <- show_overlap_and_diff(
-  seis.h.test, plotting.forecast$mean, xlab=seasonality.xlab,
+  final.testing, plotting.forecast$mean, xlab=seasonality.xlab,
   base.desc = "test set",
   compare.desc = paste0("forecast with ", plotting.forecast$method),
   overlap.ylab = "Mean hourly movement (nm)",
@@ -832,8 +838,8 @@ after.lockdown <- build_ts(seis.h, periods = c(24), start = after.lockdown.start
 # We first check the seasonplots, highlighting different weekdays
 seasonplot(before.lockdown, type="l", col=rainbow(7))
 legend("topleft", legend=weekdays(before.lockdown.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
-seasonplot(after.lockdown, type="l", col=rainbow(7))
-legend("topleft", legend=weekdays(after.lockdown.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+seasonplot(after.lockdown, type="l", col=rainbow(7)[c(6:7,1:5)])
+legend("topleft", legend=weekdays(after.lockdown.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7)[c(6:7,1:5)], lty=1, cex=0.8)
 
 
 
@@ -869,8 +875,8 @@ plot_grid(
     geom_ribbon(aes(ymin = season.before.lockdown.24$figure - season.before.lockdown.24$sd, ymax = season.before.lockdown.24$figure + season.before.lockdown.24$sd), fill = "lightcoral", alpha=0.5) +
     geom_line(aes(y=season.before.lockdown.24$figure, col="Daily before")) +
     scale_colour_manual("", values=c("purple", "red"), breaks=c("Daily lockdown", "Daily before")),
-  autoplot(ts(season.after.lockdown.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
-    geom_ribbon(aes(ymin = season.after.lockdown.168$figure - season.after.lockdown.168$sd, ymax = season.after.lockdown.168$figure + season.after.lockdown.168$sd), fill = "mediumpurple1", alpha=0.5) +
+  autoplot(ts(season.after.lockdown.168$figure[c(49:168,1:48)], frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+    geom_ribbon(aes(ymin = (season.after.lockdown.168$figure - season.after.lockdown.168$sd)[c(49:168,1:48)], ymax = (season.after.lockdown.168$figure + season.after.lockdown.168$sd)[c(49:168,1:48)]), fill = "mediumpurple1", alpha=0.5) +
     geom_line(aes(col="Weekly lockdown")) +
     geom_ribbon(aes(ymin = season.before.lockdown.168$figure - season.before.lockdown.168$sd, ymax = season.before.lockdown.168$figure + season.before.lockdown.168$sd), fill = "lightcoral", alpha=0.5) +
     geom_line(aes(y=season.before.lockdown.168$figure, col="Weekly before")) +
@@ -878,8 +884,8 @@ plot_grid(
   nrow = 2)
 
 
-autoplot(ts(seasonbase.after.lockdown.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
-  geom_ribbon(aes(ymin = seasonbase.after.lockdown.168$figure - seasonbase.after.lockdown.168$sd, ymax = seasonbase.after.lockdown.168$figure + seasonbase.after.lockdown.168$sd), fill = "mediumpurple1", alpha=0.5) +
+autoplot(ts(seasonbase.after.lockdown.168$figure[c(49:168,1:48)], frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+  geom_ribbon(aes(ymin = (seasonbase.after.lockdown.168$figure - seasonbase.after.lockdown.168$sd)[c(49:168,1:48)], ymax = (seasonbase.after.lockdown.168$figure + seasonbase.after.lockdown.168$sd)[c(49:168,1:48)]), fill = "mediumpurple1", alpha=0.5) +
   geom_line(aes(col="Weekly lockdown")) +
   geom_ribbon(aes(ymin = seasonbase.before.lockdown.168$figure - seasonbase.before.lockdown.168$sd, ymax = seasonbase.before.lockdown.168$figure + seasonbase.before.lockdown.168$sd), fill = "lightcoral", alpha=0.5) +
   geom_line(aes(y=seasonbase.before.lockdown.168$figure, col="Weekly before")) +
