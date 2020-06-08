@@ -835,11 +835,11 @@ after.lockdown.start <- as_datetime('2020-03-14T00:00:00')
 after.lockdown.end <- as_datetime('2020-04-26T00:00:00') - seconds(1)
 before.lockdown <- build_ts(seis.h, periods = c(24), start = before.lockdown.start, end = before.lockdown.end, force_ms = T)
 after.lockdown <- build_ts(seis.h, periods = c(24), start = after.lockdown.start, end = after.lockdown.end, force_ms = T)
-# We first check the seasonplots, highlighting different weekdays
-seasonplot(before.lockdown, type="l", col=rainbow(7))
+# We first check the seasonplots, highlighting different weekdays. We divide by sd to account for spikes
+seasonplot(before.lockdown/sd(before.lockdown, na.rm=T), type="l", col=rainbow(7), main="Seasonal plot: before lockdown")
 legend("topleft", legend=weekdays(before.lockdown.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
-seasonplot(after.lockdown, type="l", col=rainbow(7)[c(6:7,1:5)])
-legend("topleft", legend=weekdays(after.lockdown.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7)[c(6:7,1:5)], lty=1, cex=0.8)
+seasonplot(after.lockdown/sd(after.lockdown, na.rm=T), type="l", col=rainbow(7)[c(6:7,1:5)], main="Seasonal plot: after lockdown")
+legend("topleft", legend=weekdays(after.lockdown.start + (as.difftime(c(0:6), units="days")))[c(3:7,1:2)], col=rainbow(7), lty=1, cex=0.8)
 
 
 
@@ -890,3 +890,21 @@ autoplot(ts(seasonbase.after.lockdown.168$figure[c(49:168,1:48)], frequency=1)) 
   geom_ribbon(aes(ymin = seasonbase.before.lockdown.168$figure - seasonbase.before.lockdown.168$sd, ymax = seasonbase.before.lockdown.168$figure + seasonbase.before.lockdown.168$sd), fill = "lightcoral", alpha=0.5) +
   geom_line(aes(y=seasonbase.before.lockdown.168$figure, col="Weekly before")) +
   scale_colour_manual("", values=c("purple", "red"), breaks=c("Weekly lockdown", "Weekly before"))
+
+
+weekdays <- c("Monday", "Tuesday", "Wednseday", "Thursday", "Friday", "Saturday", "Sunday")
+
+seasonbase.before.lockdown.168.df <- data.frame(hour=rep(1:24, 7), mean=seasonbase.before.lockdown.168$figure[1:168], sd=seasonbase.before.lockdown.168$sd[1:168], Weekday=rep(weekdays, each=24))
+ggplot(data=seasonbase.before.lockdown.168.df) +
+  geom_line(aes(hour, mean - sd, col=Weekday), alpha=.1) +
+  geom_line(aes(hour, mean + sd, col=Weekday), alpha=.1) +
+  geom_ribbon(aes(hour, ymin = mean - sd, ymax = mean + sd, fill = Weekday), alpha=0.1, show.legend=F) +
+  geom_line(aes(hour, mean, col=Weekday)) +
+  scale_color_manual(values = rainbow(7), breaks=weekdays, aesthetics = c("colour", "fill"))
+seasonbase.after.lockdown.168.df <- data.frame(hour=rep(1:24, 7), mean=seasonbase.after.lockdown.168$figure[c(49:168,1:48)], sd=seasonbase.after.lockdown.168$sd[c(49:168,1:48)], Weekday=rep(weekdays, each=24))
+ggplot(data=seasonbase.after.lockdown.168.df) +
+  geom_line(aes(hour, mean - sd, col=Weekday), alpha=.1) +
+  geom_line(aes(hour, mean + sd, col=Weekday), alpha=.1) +
+  geom_ribbon(aes(hour, ymin = mean - sd, ymax = mean + sd, fill = Weekday), alpha=0.1, show.legend=F) +
+  geom_line(aes(hour, mean, col=Weekday)) +
+  scale_color_manual(values = rainbow(7), breaks=weekdays, aesthetics = c("colour", "fill"))
