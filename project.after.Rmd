@@ -10,7 +10,9 @@ c(seis.train.start, seis.test.final.start, seis.test.final.end)
 final.training <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.end, force_ms = T)
 final.testing <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.final.end, force_ms = T)
 final.testing <- window(final.testing, start = c(end(final.training)[1] + 1, 1))
-c(chosen.lambda, BoxCox.lambda(final.training))
+if (!is.null(chosen.lambda)) {
+  cat(chosen.lambda, BoxCox.lambda(final.training), chosen.lambda == BoxCox.lambda(final.training), "\n")
+}
 
 fit.name <- paste0("fit", paste0(chosen.model, collapse = ""))
 forecast.name <- paste0("forecast", paste0(chosen.model, collapse = ""))
@@ -84,7 +86,7 @@ legend("topleft", legend=weekdays(seis.train.start + (as.difftime(c(0:6), units=
 
 
 final.testing.24 <- build_ts(final.testing, periods = c(24))
-seasonplot(final.testing.24/sd(final.training.24, na.rm = T), type="l", col=rainbow(7))
+seasonplot(final.testing.24/sd(final.testing.24, na.rm = T), type="l", col=rainbow(7))
 legend("topleft", legend=weekdays(seis.test.final.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
 
 ```

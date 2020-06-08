@@ -766,18 +766,121 @@ chosen.model <- c(2,0,0,0,1,1)
 
 
 
-#################### Final testing ####################
+#################### Final assessing ####################
 # Now we will bring the chosen model to cover all training+test data (ending on 2020-03-01 23:59:59 UTC), and test it for the next 8 weeks (until 2020-04-26 23:59:59 UTC)
+# If a similar procedure as the above is followed, we will find that the same model (and the same Box-Cox lambda for Membach) are the best choices
+# This is probably due to both datasets being quite stable over time
 
 
+
+# We make our final train/test split date on 2nd of March
 seis.test.final.start <- seis.test.end + seconds(1)
 seis.test.final.end <- seis.test.final.start + days(7*8) - seconds(1)
-c(seis.train.start, seis.test.final.start, seis.test.final.end)
-
 final.training <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.end, force_ms = T)
 final.testing <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.final.end, force_ms = T)
 final.testing <- window(final.testing, start = c(end(final.training)[1] + 1, 1))
 if (!is.null(chosen.lambda)) {
-  cat(chosen.lambda, BoxCox.lambda(final.training), chosen.lambda == BoxCox.lambda(final.training))
+  cat(chosen.lambda, BoxCox.lambda(final.training), chosen.lambda == BoxCox.lambda(final.training), "\n")
 }
+# Then, we fit the chosen model on the new training set
+fit.name <- paste0("fit", paste0(chosen.model, collapse = ""))
+forecast.name <- paste0("forecast", paste0(chosen.model, collapse = ""))
+cat("SARIMA(", paste0(chosen.model[1:3], collapse = ","), ")(", paste0(chosen.model[4:6], collapse = ","), ")[", frequency(final.training), "]", sep = "")
+if (!exists("final.model")) {
+  cat(" fitting...")
+  final.model <- Arima(final.training, chosen.model[1:3], chosen.model[4:6], lambda=chosen.lambda)
+  cat("DONE")
+}
+if (!exists("final.forecast")) {
+  cat(" forecasting...")
+  final.forecast <- forecast(final.model, h=168*8, lambda=chosen.lambda)
+  cat("DONE")
+}
+cat("\n")
+# We can directly assess how the forecasts behave
+plotting.model <- final.model
+plotting.forecast <- final.forecast
+# plot forecasts
+print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)"))
+# print stats about data falling inside 80% and 90% CIs
+cat("Test set inside the CI\n")
+cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < seis.h.test & seis.h.test < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
+cat("95% CI \t ", print_dec(mean(plotting.forecast$lower[,2] < seis.h.test & seis.h.test < plotting.forecast$upper[,2], na.rm = T)*100), "%\n")
+# plot overlap/difference with test data
+plots <- show_overlap_and_diff(
+  seis.h.test, plotting.forecast$mean, xlab=seasonality.xlab,
+  base.desc = "test set",
+  compare.desc = paste0("forecast with ", plotting.forecast$method),
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="%",
+  diff.ylab.sec.accuracy = .01
+)
+print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
+# print accuracy statistics (different errors, mainly MAPE is considered)
+print(accuracy(plotting.forecast, seis.h.test))
 
+
+
+# Then, we check specifically the seasonalities behaviours
+before.lockdown.start <- seis.train.start
+before.lockdown.end <- as_datetime('2020-03-14T00:00:00') - seconds(1)
+after.lockdown.start <- as_datetime('2020-03-14T00:00:00')
+after.lockdown.end <- as_datetime('2020-04-26T00:00:00') - seconds(1)
+before.lockdown <- build_ts(seis.h, periods = c(24), start = before.lockdown.start, end = before.lockdown.end, force_ms = T)
+after.lockdown <- build_ts(seis.h, periods = c(24), start = after.lockdown.start, end = after.lockdown.end, force_ms = T)
+# We first check the seasonplots, highlighting different weekdays
+seasonplot(before.lockdown, type="l", col=rainbow(7))
+legend("topleft", legend=weekdays(before.lockdown.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+seasonplot(after.lockdown, type="l", col=rainbow(7))
+legend("topleft", legend=weekdays(after.lockdown.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+
+
+
+# Then, we proceed with the mean-over-period method, with 3 cycles for concurrent extraction, before lockdown
+aggregated.before.lockdown <- seasonality.aggregate(before.lockdown)
+season.before.lockdown.24 <- trend_season(aggregated.before.lockdown, 24)
+season.before.lockdown.168 <- trend_season(aggregated.before.lockdown-season.before.lockdown.24$seasonal, 168)
+season.before.lockdown.24 <- trend_season(aggregated.before.lockdown-season.before.lockdown.168$seasonal, 24)
+season.before.lockdown.168 <- trend_season(aggregated.before.lockdown-season.before.lockdown.24$seasonal, 168)
+season.before.lockdown.24 <- trend_season(aggregated.before.lockdown-season.before.lockdown.168$seasonal, 24)
+season.before.lockdown.168 <- trend_season(aggregated.before.lockdown-season.before.lockdown.24$seasonal, 168)
+seasonbase.before.lockdown.168 <- trend_season(aggregated.before.lockdown, 168)
+
+
+
+# Then, we proceed with the mean-over-period method, with 3 cycles for concurrent extraction, after lockdown
+aggregated.after.lockdown <- seasonality.aggregate(after.lockdown)
+season.after.lockdown.24 <- trend_season(aggregated.after.lockdown, 24)
+season.after.lockdown.168 <- trend_season(aggregated.after.lockdown-season.after.lockdown.24$seasonal, 168)
+season.after.lockdown.24 <- trend_season(aggregated.after.lockdown-season.after.lockdown.168$seasonal, 24)
+season.after.lockdown.168 <- trend_season(aggregated.after.lockdown-season.after.lockdown.24$seasonal, 168)
+season.after.lockdown.24 <- trend_season(aggregated.after.lockdown-season.after.lockdown.168$seasonal, 24)
+season.after.lockdown.168 <- trend_season(aggregated.after.lockdown-season.after.lockdown.24$seasonal, 168)
+seasonbase.after.lockdown.168 <- trend_season(aggregated.after.lockdown, 168)
+
+
+
+# Finally, we can compare the extracted seasonalities, both concurrent and only weekly
+plot_grid(
+  autoplot(ts(season.after.lockdown.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+    geom_ribbon(aes(ymin = season.after.lockdown.24$figure - season.after.lockdown.24$sd, ymax = season.after.lockdown.24$figure + season.after.lockdown.24$sd), fill = "mediumpurple1", alpha=0.5) +
+    geom_line(aes(col="Daily lockdown")) +
+    geom_ribbon(aes(ymin = season.before.lockdown.24$figure - season.before.lockdown.24$sd, ymax = season.before.lockdown.24$figure + season.before.lockdown.24$sd), fill = "lightcoral", alpha=0.5) +
+    geom_line(aes(y=season.before.lockdown.24$figure, col="Daily before")) +
+    scale_colour_manual("", values=c("purple", "red"), breaks=c("Daily lockdown", "Daily before")),
+  autoplot(ts(season.after.lockdown.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+    geom_ribbon(aes(ymin = season.after.lockdown.168$figure - season.after.lockdown.168$sd, ymax = season.after.lockdown.168$figure + season.after.lockdown.168$sd), fill = "mediumpurple1", alpha=0.5) +
+    geom_line(aes(col="Weekly lockdown")) +
+    geom_ribbon(aes(ymin = season.before.lockdown.168$figure - season.before.lockdown.168$sd, ymax = season.before.lockdown.168$figure + season.before.lockdown.168$sd), fill = "lightcoral", alpha=0.5) +
+    geom_line(aes(y=season.before.lockdown.168$figure, col="Weekly before")) +
+    scale_colour_manual("", values=c("purple", "red"), breaks=c("Weekly lockdown", "Weekly before")),
+  nrow = 2)
+
+
+autoplot(ts(seasonbase.after.lockdown.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+  geom_ribbon(aes(ymin = seasonbase.after.lockdown.168$figure - seasonbase.after.lockdown.168$sd, ymax = seasonbase.after.lockdown.168$figure + seasonbase.after.lockdown.168$sd), fill = "mediumpurple1", alpha=0.5) +
+  geom_line(aes(col="Weekly lockdown")) +
+  geom_ribbon(aes(ymin = seasonbase.before.lockdown.168$figure - seasonbase.before.lockdown.168$sd, ymax = seasonbase.before.lockdown.168$figure + seasonbase.before.lockdown.168$sd), fill = "lightcoral", alpha=0.5) +
+  geom_line(aes(y=seasonbase.before.lockdown.168$figure, col="Weekly before")) +
+  scale_colour_manual("", values=c("purple", "red"), breaks=c("Weekly lockdown", "Weekly before"))
