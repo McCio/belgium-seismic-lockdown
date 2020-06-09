@@ -43,7 +43,7 @@ print(plot_grid(
   residuals.pacf,
   nrow = 2
 ))
-print(plot_forecast(plotting.forecast) + autolayer(final.testing, series="Original") + ylab("Mean hourly movement (nm)"))
+print(plot_forecast(plotting.forecast) + autolayer(final.testing, series="Original") + ylab("Mean hourly movement (nm)") + xlab("Weeks") + geom_vline(aes(xintercept=as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1), linetype=2))
 plots <- show_overlap_and_diff(
   final.training, plotting.forecast$fitted, xlab=seasonality.xlab,
   base.desc = "training set",
@@ -68,8 +68,11 @@ plots <- show_overlap_and_diff(
   diff.ylab = "nm", diff.ylab.sec="%",
   diff.ylab.sec.accuracy = .01
 )
-print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
-  
+print(plot_grid(plots[[1]] + geom_vline(aes(xintercept=as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1), linetype=2),
+                plots[[2]] + geom_vline(aes(xintercept=as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1), linetype=2),
+                nrow = 2
+                ))
+
 print(accuracy(plotting.forecast, final.testing))
 # qqPlot(plotting.model$residuals, main = paste0("Q-Q plot for ", plotting.forecast$method), xlab = "residuals")
 print(gg_qqplot(plotting.model$residuals) + 
@@ -92,6 +95,7 @@ legend("topleft", legend=weekdays(before.lockdown.start + (as.difftime(c(0:6), u
 seasonplot(after.lockdown/sd(after.lockdown, na.rm=T), type="l", col=rainbow(7)[c(6:7,1:5)], main="Seasonal plot: after lockdown")
 legend("topleft", legend=weekdays(after.lockdown.start + (as.difftime(c(0:6), units="days")))[c(3:7,1:2)], col=rainbow(7), lty=1, cex=0.8)
 
+weekdays <- c("Monday", "Tuesday", "Wednseday", "Thursday", "Friday", "Saturday", "Sunday")
 ```
 
 
@@ -104,19 +108,22 @@ season.before.lockdown.168 <- trend_season(aggregated.before.lockdown-season.bef
 # this third iteration isn't actually needed
 season.before.lockdown.24 <- trend_season(aggregated.before.lockdown-season.before.lockdown.168$seasonal, 24)
 season.before.lockdown.168 <- trend_season(aggregated.before.lockdown-season.before.lockdown.24$seasonal, 168)
+season.before.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=season.before.lockdown.168$figure[1:168], sd=season.before.lockdown.168$sd[1:168], Weekday=rep(weekdays, each=24))
 seasonbase.before.lockdown.24 <- trend_season(aggregated.before.lockdown, 24)
+seasonbase.before.lockdown.24.df <- data.frame(Hour=1:24, figure=seasonbase.before.lockdown.24$figure, sd=seasonbase.before.lockdown.24$sd)
 seasonbase.before.lockdown.168 <- trend_season(aggregated.before.lockdown, 168)
+seasonbase.before.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=seasonbase.before.lockdown.168$figure[1:168], sd=seasonbase.before.lockdown.168$sd[1:168], Weekday=rep(weekdays, each=24))
 
 
 plot_grid(
-  autoplot(ts(seasonbase.before.lockdown.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct daily"), size=1.5) +
-    geom_line(aes(y=season.before.lockdown.24$figure, col="Multi daily")) +
+  autoplot(ts(seasonbase.before.lockdown.24.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct daily"), size=1.5) +
+    geom_line(aes(y=season.before.lockdown.24.df$figure, col="Multi daily")) +
     scale_colour_manual("", values=c("purple", "yellow"), breaks=c("Direct daily", "Multi daily")),
-  autoplot(ts(seasonbase.before.lockdown.168$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct weekly"), size=1.5) +
-    geom_line(aes(y=season.before.lockdown.168$figure + rep(season.before.lockdown.24$figure, 7), col="Multi w+d")) +
+  autoplot(ts(seasonbase.before.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct weekly"), size=1.5) +
+    geom_line(aes(y=season.before.lockdown.168.df$figure + rep(season.before.lockdown.24.df$figure, 7), col="Multi w+d")) +
     #geom_line(aes(y=rep(seasonbase.before.lockdown.24$figure, 7), col="Direct daily"), size=1.5) +
     #geom_line(aes(y=rep(season.before.lockdown.24$figure, 7), col="Multi daily")) +
-    geom_line(aes(y=season.before.lockdown.168$figure, col="Multi weekly")) +
+    geom_line(aes(y=season.before.lockdown.168.df$figure, col="Multi weekly")) +
     scale_colour_manual("", values=c("red", "purple", "blue", "yellow", "green"), breaks=c("Direct weekly", "Direct daily", "Multi" %s+% c(" weekly", " daily", " w+d"))),
   nrow = 2)
 
@@ -131,18 +138,22 @@ season.after.lockdown.24 <- trend_season(aggregated.after.lockdown-season.after.
 season.after.lockdown.168 <- trend_season(aggregated.after.lockdown-season.after.lockdown.24$seasonal, 168)
 season.after.lockdown.24 <- trend_season(aggregated.after.lockdown-season.after.lockdown.168$seasonal, 24)
 season.after.lockdown.168 <- trend_season(aggregated.after.lockdown-season.after.lockdown.24$seasonal, 168)
+season.after.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=season.after.lockdown.168$figure[c(49:168,1:48)], sd=season.after.lockdown.168$sd[c(49:168,1:48)], Weekday=rep(weekdays, each=24))
 seasonbase.after.lockdown.24 <- trend_season(aggregated.after.lockdown, 24)
+seasonbase.after.lockdown.24 <- trend_season(aggregated.after.lockdown, 24)
+seasonbase.after.lockdown.24.df <- data.frame(Hour=1:24, figure=seasonbase.after.lockdown.24$figure, sd=seasonbase.after.lockdown.24$sd)
 seasonbase.after.lockdown.168 <- trend_season(aggregated.after.lockdown, 168)
+seasonbase.after.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=seasonbase.after.lockdown.168$figure[c(49:168,1:48)], sd=seasonbase.after.lockdown.168$sd[c(49:168,1:48)], Weekday=rep(weekdays, each=24))
 
 plot_grid(
-  autoplot(ts(seasonbase.after.lockdown.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct daily"), size=1.5) +
+  autoplot(ts(seasonbase.after.lockdown.24.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct daily"), size=1.5) +
     geom_line(aes(y=season.after.lockdown.24$figure, col="Multi daily")) +
     scale_colour_manual("", values=c("purple", "yellow"), breaks=c("Direct daily", "Multi daily")),
-  autoplot(ts(seasonbase.after.lockdown.168$figure[c(49:168,1:48)], frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct weekly"), size=1.5) +
-    geom_line(aes(y=season.after.lockdown.168$figure[c(49:168,1:48)] + rep(season.after.lockdown.24$figure, 7), col="Multi w+d")) +
+  autoplot(ts(seasonbase.after.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct weekly"), size=1.5) +
+    geom_line(aes(y=season.after.lockdown.168.df$figure + rep(season.after.lockdown.24$figure, 7), col="Multi w+d")) +
     #geom_line(aes(y=rep(seasonbase.after.lockdown.24$figure, 7), col="Direct daily"), size=1.5) +
     #geom_line(aes(y=rep(season.after.lockdown.24$figure, 7), col="Multi daily")) +
-    geom_line(aes(y=season.after.lockdown.168$figure[c(49:168,1:48)], col="Multi weekly")) +
+    geom_line(aes(y=season.after.lockdown.168.df$figure, col="Multi weekly")) +
     scale_colour_manual("", values=c("red", "purple", "blue", "yellow", "green"), breaks=c("Direct weekly", "Direct daily", "Multi" %s+% c(" weekly", " daily", " w+d"))),
   nrow = 2)
 
@@ -152,46 +163,44 @@ plot_grid(
 
 plot_grid(
   autoplot(ts(season.after.lockdown.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
-    geom_ribbon(aes(ymin = season.after.lockdown.24$figure - season.after.lockdown.24$sd, ymax = season.after.lockdown.24$figure + season.after.lockdown.24$sd), fill = "mediumpurple1", alpha=0.5) +
-    geom_line(aes(col="Daily lockdown")) +
-    geom_ribbon(aes(ymin = season.before.lockdown.24$figure - season.before.lockdown.24$sd, ymax = season.before.lockdown.24$figure + season.before.lockdown.24$sd), fill = "lightcoral", alpha=0.5) +
-    geom_line(aes(y=season.before.lockdown.24$figure, col="Daily before")) +
-    scale_colour_manual("", values=c("purple", "red"), breaks=c("Daily lockdown", "Daily before")),
-  autoplot(ts(season.after.lockdown.168$figure[c(49:168,1:48)], frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
-    geom_ribbon(aes(ymin = (season.after.lockdown.168$figure - season.after.lockdown.168$sd)[c(49:168,1:48)], ymax = (season.after.lockdown.168$figure + season.after.lockdown.168$sd)[c(49:168,1:48)]), fill = "mediumpurple1", alpha=0.5) +
-    geom_line(aes(col="Weekly lockdown")) +
-    geom_ribbon(aes(ymin = season.before.lockdown.168$figure - season.before.lockdown.168$sd, ymax = season.before.lockdown.168$figure + season.before.lockdown.168$sd), fill = "lightcoral", alpha=0.5) +
-    geom_line(aes(y=season.before.lockdown.168$figure, col="Weekly before")) +
-    scale_colour_manual("", values=c("purple", "red"), breaks=c("Weekly lockdown", "Weekly before")),
-nrow = 2)
+    geom_ribbon(aes(ymin = season.after.lockdown.24$figure  - season.after.lockdown.24$sd,  ymax = season.after.lockdown.24$figure  + season.after.lockdown.24$sd),  alpha=0.5, fill = "mediumpurple1") +
+    geom_line(aes(col="After lockdown")) +
+    geom_ribbon(aes(ymin = season.before.lockdown.24$figure - season.before.lockdown.24$sd, ymax = season.before.lockdown.24$figure + season.before.lockdown.24$sd), alpha=0.5, fill = "lightcoral") +
+    geom_line(aes(y=season.before.lockdown.24$figure, col="Before lockdown")) +
+    scale_colour_manual("", values=c("purple", "red"), breaks=c("After lockdown", "Before lockdown")),
+  autoplot(ts(season.after.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+    geom_ribbon(aes(ymin = season.after.lockdown.168.df$figure  - season.after.lockdown.168.df$sd,  ymax = season.after.lockdown.168.df$figure  + season.after.lockdown.168.df$sd),  alpha=0.5, fill = "mediumpurple1") +
+    geom_line(aes(col="After lockdown")) +
+    geom_ribbon(aes(ymin = season.before.lockdown.168.df$figure - season.before.lockdown.168.df$sd, ymax = season.before.lockdown.168.df$figure + season.before.lockdown.168.df$sd), alpha=0.5, fill = "lightcoral") +
+    geom_line(aes(y=season.before.lockdown.168.df$figure, col="Before lockdown")) +
+    scale_colour_manual("", values=c("purple", "red"), breaks=c("After lockdown", "Before lockdown")),
+  nrow = 2)
 
 
-autoplot(ts(seasonbase.after.lockdown.168$figure[c(49:168,1:48)], frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
-  geom_ribbon(aes(ymin = (seasonbase.after.lockdown.168$figure - seasonbase.after.lockdown.168$sd)[c(49:168,1:48)], ymax = (seasonbase.after.lockdown.168$figure + seasonbase.after.lockdown.168$sd)[c(49:168,1:48)]), fill = "mediumpurple1", alpha=0.5) +
-  geom_line(aes(col="Weekly lockdown")) +
-  geom_ribbon(aes(ymin = seasonbase.before.lockdown.168$figure - seasonbase.before.lockdown.168$sd, ymax = seasonbase.before.lockdown.168$figure + seasonbase.before.lockdown.168$sd), fill = "lightcoral", alpha=0.5) +
-  geom_line(aes(y=seasonbase.before.lockdown.168$figure, col="Weekly before")) +
-  scale_colour_manual("", values=c("purple", "red"), breaks=c("Weekly lockdown", "Weekly before"))
+autoplot(ts(seasonbase.after.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+  geom_ribbon(aes(ymin = (seasonbase.after.lockdown.168.df$figure - seasonbase.after.lockdown.168.df$sd), ymax = (seasonbase.after.lockdown.168.df$figure + seasonbase.after.lockdown.168.df$sd)), fill = "mediumpurple1", alpha=0.5) +
+  geom_line(aes(col="After lockdown")) +
+  geom_ribbon(aes(ymin = seasonbase.before.lockdown.168.df$figure - seasonbase.before.lockdown.168.df$sd, ymax = seasonbase.before.lockdown.168.df$figure + seasonbase.before.lockdown.168.df$sd), fill = "lightcoral", alpha=0.5) +
+  geom_line(aes(y=seasonbase.before.lockdown.168.df$figure, col="Before lockdown")) +
+  scale_colour_manual("", values=c("purple", "red"), breaks=c("After lockdown", "Before lockdown"))
 ```
 ```{r seasonalities/seasonplot-mean-sd}
-weekdays <- c("Monday", "Tuesday", "Wednseday", "Thursday", "Friday", "Saturday", "Sunday")
-
-seasonbase.before.lockdown.168.df <- data.frame(hour=rep(1:24, 7), mean=seasonbase.before.lockdown.168$figure[1:168], sd=seasonbase.before.lockdown.168$sd[1:168], Weekday=rep(weekdays, each=24))
 ggplot(data=seasonbase.before.lockdown.168.df) +
-  geom_line(aes(hour, mean - sd, col=Weekday), alpha=.1) +
-  geom_line(aes(hour, mean + sd, col=Weekday), alpha=.1) +
-  geom_ribbon(aes(hour, ymin = mean - sd, ymax = mean + sd, fill = Weekday), alpha=0.1, show.legend=F) +
-  geom_line(aes(hour, mean, col=Weekday)) +
+  geom_line(aes(Hour, figure - sd, col=Weekday), alpha=.1) +
+  geom_line(aes(Hour, figure + sd, col=Weekday), alpha=.1) +
+  geom_ribbon(aes(Hour, ymin = figure - sd, ymax = figure + sd, fill = Weekday), alpha=0.1, show.legend=F) +
+  geom_line(aes(Hour, figure, col=Weekday)) +
   ylab("Mean hourly movement (nm)") +
+  labs(title="Seasonal plot: before lockdown") +
   scale_color_manual(values = rainbow(7), breaks=weekdays, aesthetics = c("colour", "fill"))
 
 
-seasonbase.after.lockdown.168.df <- data.frame(hour=rep(1:24, 7), mean=seasonbase.after.lockdown.168$figure[c(49:168,1:48)], sd=seasonbase.after.lockdown.168$sd[c(49:168,1:48)], Weekday=rep(weekdays, each=24))
 ggplot(data=seasonbase.after.lockdown.168.df) +
-  geom_line(aes(hour, mean - sd, col=Weekday), alpha=.1) +
-  geom_line(aes(hour, mean + sd, col=Weekday), alpha=.1) +
-  geom_ribbon(aes(hour, ymin = mean - sd, ymax = mean + sd, fill = Weekday), alpha=0.1, show.legend=F) +
-  geom_line(aes(hour, mean, col=Weekday)) +
+  geom_line(aes(Hour, figure - sd, col=Weekday), alpha=.1) +
+  geom_line(aes(Hour, figure + sd, col=Weekday), alpha=.1) +
+  geom_ribbon(aes(Hour, ymin = figure - sd, ymax = figure + sd, fill = Weekday), alpha=0.1, show.legend=F) +
+  geom_line(aes(Hour, figure, col=Weekday)) +
   ylab("Mean hourly movement (nm)") +
+  labs(title="Seasonal plot: after lockdown") +
   scale_color_manual(values = rainbow(7), breaks=weekdays, aesthetics = c("colour", "fill"))
 ```

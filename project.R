@@ -769,6 +769,7 @@ chosen.model <- c(2,0,0,0,1,1)
 # we finally set the chosen model for Membach
 chosen.model <- c(2,0,0,0,1,1)
 # they seem equal, but the chosen.lambda is actually different
+#################### Parameters Estimation END ####################
 
 
 
@@ -807,7 +808,7 @@ cat("\n")
 plotting.model <- final.model
 plotting.forecast <- final.forecast
 # plot forecasts
-print(plot_forecast(plotting.forecast) + autolayer(final.testing, series="Original") + ylab("Mean hourly movement (nm)"))
+print(plot_forecast(plotting.forecast) + autolayer(final.testing, series="Original") + ylab("Mean hourly movement (nm)") + xlab("Weeks"))
 # print stats about data falling inside 80% and 90% CIs
 cat("Test set inside the CI\n")
 cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < final.testing & final.testing < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
@@ -843,6 +844,7 @@ legend("topleft", legend=weekdays(after.lockdown.start + (as.difftime(c(0:6), un
 
 
 
+weekdays <- c("Monday", "Tuesday", "Wednseday", "Thursday", "Friday", "Saturday", "Sunday")
 # Then, we proceed with the mean-over-period method, with 3 cycles for concurrent extraction, before lockdown
 aggregated.before.lockdown <- seasonality.aggregate(before.lockdown)
 season.before.lockdown.24 <- trend_season(aggregated.before.lockdown, 24)
@@ -851,9 +853,9 @@ season.before.lockdown.24 <- trend_season(aggregated.before.lockdown-season.befo
 season.before.lockdown.168 <- trend_season(aggregated.before.lockdown-season.before.lockdown.24$seasonal, 168)
 season.before.lockdown.24 <- trend_season(aggregated.before.lockdown-season.before.lockdown.168$seasonal, 24)
 season.before.lockdown.168 <- trend_season(aggregated.before.lockdown-season.before.lockdown.24$seasonal, 168)
+season.before.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=season.before.lockdown.168$figure[1:168], sd=season.before.lockdown.168$sd[1:168], Weekday=rep(weekdays, each=24))
 seasonbase.before.lockdown.168 <- trend_season(aggregated.before.lockdown, 168)
-
-
+seasonbase.before.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=seasonbase.before.lockdown.168$figure[1:168], sd=seasonbase.before.lockdown.168$sd[1:168], Weekday=rep(weekdays, each=24))
 
 # Then, we proceed with the mean-over-period method, with 3 cycles for concurrent extraction, after lockdown
 aggregated.after.lockdown <- seasonality.aggregate(after.lockdown)
@@ -863,48 +865,40 @@ season.after.lockdown.24 <- trend_season(aggregated.after.lockdown-season.after.
 season.after.lockdown.168 <- trend_season(aggregated.after.lockdown-season.after.lockdown.24$seasonal, 168)
 season.after.lockdown.24 <- trend_season(aggregated.after.lockdown-season.after.lockdown.168$seasonal, 24)
 season.after.lockdown.168 <- trend_season(aggregated.after.lockdown-season.after.lockdown.24$seasonal, 168)
+season.after.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=season.after.lockdown.168$figure[c(49:168,1:48)], sd=season.after.lockdown.168$sd[c(49:168,1:48)], Weekday=rep(weekdays, each=24))
 seasonbase.after.lockdown.168 <- trend_season(aggregated.after.lockdown, 168)
-
-
+seasonbase.after.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=seasonbase.after.lockdown.168$figure[c(49:168,1:48)], sd=seasonbase.after.lockdown.168$sd[c(49:168,1:48)], Weekday=rep(weekdays, each=24))
 
 # Finally, we can compare the extracted seasonalities, both concurrent and only weekly
 plot_grid(
   autoplot(ts(season.after.lockdown.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
-    geom_ribbon(aes(ymin = season.after.lockdown.24$figure - season.after.lockdown.24$sd, ymax = season.after.lockdown.24$figure + season.after.lockdown.24$sd), fill = "mediumpurple1", alpha=0.5) +
-    geom_line(aes(col="Daily lockdown")) +
-    geom_ribbon(aes(ymin = season.before.lockdown.24$figure - season.before.lockdown.24$sd, ymax = season.before.lockdown.24$figure + season.before.lockdown.24$sd), fill = "lightcoral", alpha=0.5) +
-    geom_line(aes(y=season.before.lockdown.24$figure, col="Daily before")) +
-    scale_colour_manual("", values=c("purple", "red"), breaks=c("Daily lockdown", "Daily before")),
-  autoplot(ts(season.after.lockdown.168$figure[c(49:168,1:48)], frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
-    geom_ribbon(aes(ymin = (season.after.lockdown.168$figure - season.after.lockdown.168$sd)[c(49:168,1:48)], ymax = (season.after.lockdown.168$figure + season.after.lockdown.168$sd)[c(49:168,1:48)]), fill = "mediumpurple1", alpha=0.5) +
-    geom_line(aes(col="Weekly lockdown")) +
-    geom_ribbon(aes(ymin = season.before.lockdown.168$figure - season.before.lockdown.168$sd, ymax = season.before.lockdown.168$figure + season.before.lockdown.168$sd), fill = "lightcoral", alpha=0.5) +
-    geom_line(aes(y=season.before.lockdown.168$figure, col="Weekly before")) +
-    scale_colour_manual("", values=c("purple", "red"), breaks=c("Weekly lockdown", "Weekly before")),
+    geom_ribbon(aes(ymin = season.after.lockdown.24$figure  - season.after.lockdown.24$sd,  ymax = season.after.lockdown.24$figure  + season.after.lockdown.24$sd),  alpha=0.5, fill = "mediumpurple1") +
+    geom_line(aes(col="After lockdown")) +
+    geom_ribbon(aes(ymin = season.before.lockdown.24$figure - season.before.lockdown.24$sd, ymax = season.before.lockdown.24$figure + season.before.lockdown.24$sd), alpha=0.5, fill = "lightcoral") +
+    geom_line(aes(y=season.before.lockdown.24$figure, col="Before lockdown")) +
+    scale_colour_manual("", values=c("purple", "red"), breaks=c("After lockdown", "Before lockdown")),
+  autoplot(ts(season.after.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+    geom_ribbon(aes(ymin = season.after.lockdown.168.df$figure  - season.after.lockdown.168.df$sd,  ymax = season.after.lockdown.168.df$figure  + season.after.lockdown.168.df$sd),  alpha=0.5, fill = "mediumpurple1") +
+    geom_line(aes(col="After lockdown")) +
+    geom_ribbon(aes(ymin = season.before.lockdown.168.df$figure - season.before.lockdown.168.df$sd, ymax = season.before.lockdown.168.df$figure + season.before.lockdown.168.df$sd), alpha=0.5, fill = "lightcoral") +
+    geom_line(aes(y=season.before.lockdown.168.df$figure, col="Before lockdown")) +
+    scale_colour_manual("", values=c("purple", "red"), breaks=c("After lockdown", "Before lockdown")),
   nrow = 2)
 
-
-autoplot(ts(seasonbase.after.lockdown.168$figure[c(49:168,1:48)], frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
-  geom_ribbon(aes(ymin = (seasonbase.after.lockdown.168$figure - seasonbase.after.lockdown.168$sd)[c(49:168,1:48)], ymax = (seasonbase.after.lockdown.168$figure + seasonbase.after.lockdown.168$sd)[c(49:168,1:48)]), fill = "mediumpurple1", alpha=0.5) +
-  geom_line(aes(col="Weekly lockdown")) +
-  geom_ribbon(aes(ymin = seasonbase.before.lockdown.168$figure - seasonbase.before.lockdown.168$sd, ymax = seasonbase.before.lockdown.168$figure + seasonbase.before.lockdown.168$sd), fill = "lightcoral", alpha=0.5) +
-  geom_line(aes(y=seasonbase.before.lockdown.168$figure, col="Weekly before")) +
-  scale_colour_manual("", values=c("purple", "red"), breaks=c("Weekly lockdown", "Weekly before"))
-
-
-weekdays <- c("Monday", "Tuesday", "Wednseday", "Thursday", "Friday", "Saturday", "Sunday")
-
-seasonbase.before.lockdown.168.df <- data.frame(hour=rep(1:24, 7), mean=seasonbase.before.lockdown.168$figure[1:168], sd=seasonbase.before.lockdown.168$sd[1:168], Weekday=rep(weekdays, each=24))
+# We also build the seasonal plots showing the sd confidence bands
 ggplot(data=seasonbase.before.lockdown.168.df) +
-  geom_line(aes(hour, mean - sd, col=Weekday), alpha=.1) +
-  geom_line(aes(hour, mean + sd, col=Weekday), alpha=.1) +
-  geom_ribbon(aes(hour, ymin = mean - sd, ymax = mean + sd, fill = Weekday), alpha=0.1, show.legend=F) +
-  geom_line(aes(hour, mean, col=Weekday)) +
+  geom_line(aes(Hour, figure - sd, col=Weekday), alpha=.1) +
+  geom_line(aes(Hour, figure + sd, col=Weekday), alpha=.1) +
+  geom_ribbon(aes(Hour, ymin = figure - sd, ymax = figure + sd, fill = Weekday), alpha=0.1, show.legend=F) +
+  geom_line(aes(Hour, figure, col=Weekday)) +
+  ylab("Mean hourly movement (nm)") +
+  labs(title="Seasonal plot: before lockdown") +
   scale_color_manual(values = rainbow(7), breaks=weekdays, aesthetics = c("colour", "fill"))
-seasonbase.after.lockdown.168.df <- data.frame(hour=rep(1:24, 7), mean=seasonbase.after.lockdown.168$figure[c(49:168,1:48)], sd=seasonbase.after.lockdown.168$sd[c(49:168,1:48)], Weekday=rep(weekdays, each=24))
 ggplot(data=seasonbase.after.lockdown.168.df) +
-  geom_line(aes(hour, mean - sd, col=Weekday), alpha=.1) +
-  geom_line(aes(hour, mean + sd, col=Weekday), alpha=.1) +
-  geom_ribbon(aes(hour, ymin = mean - sd, ymax = mean + sd, fill = Weekday), alpha=0.1, show.legend=F) +
-  geom_line(aes(hour, mean, col=Weekday)) +
+  geom_line(aes(Hour, figure - sd, col=Weekday), alpha=.1) +
+  geom_line(aes(Hour, figure + sd, col=Weekday), alpha=.1) +
+  geom_ribbon(aes(Hour, ymin = figure - sd, ymax = figure + sd, fill = Weekday), alpha=0.1, show.legend=F) +
+  geom_line(aes(Hour, figure, col=Weekday)) +
+  ylab("Mean hourly movement (nm)") +
+  labs(title="Seasonal plot: after lockdown") +
   scale_color_manual(values = rainbow(7), breaks=weekdays, aesthetics = c("colour", "fill"))
