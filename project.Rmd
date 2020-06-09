@@ -308,8 +308,8 @@ pgram <- spec.pgram(stats::filter(build_ts(seis.h, start = seis.train.start, end
                     detrend=F, demean=T, na.action=na.aggregate, plot=F)
 pgram.data <- data.frame(freq=pgram$freq, spec=pgram$spec)
 ggplot(pgram.data) +
-  geom_line(aes(freq, log(spec))) +
-  xlab("frequency") + ylab("log(spectrum)") +
+  geom_line(aes(freq, spec)) +
+  xlab("frequency") + ylab("spectrum") +
   labs(title = "Periodgram", caption = paste0("bandwidth = ", pgram$bandwidth, "    df = ", pgram$df)) ->
   periodgram
 
@@ -331,10 +331,10 @@ ratio.color <- function(x) ifelse(x >= (mean(pgram$spec) + sd(pgram$spec)*3), "r
 shown_labels <- 4
 periodgram +
   scale_x_continuous(sec.axis = sec_axis(~1/./3600, breaks=c(1, 3, 2*c(1,2,3,4,6,12), 24*7), labels = as.integer, name="hours")) +
-  scale_y_continuous(sec.axis = sec_axis(~exp(.), breaks=mean(pgram$spec) + sd(pgram$spec) * c(1,3), labels=c("1", "2", "3")[c(1,3)], name="spectrum/sd ratio")) +
-  geom_hline(yintercept=log(mean(pgram$spec) + sd(pgram$spec) * c(1:3)), linetype="dotted", color = ratio.color(mean(pgram$spec) + sd(pgram$spec) * c(1:3))) +
-  geom_point(data=data.frame(freq=top95freq, spec=top95pc), aes(freq, log(spec), color=ratio.color(spec)), shape="o", size=4, show.legend = F) +
-  geom_label_repel(data=data.frame(freq=top95freq, spec=top95pc)[1:shown_labels,], aes(freq, log(spec), label=round(1/freq/3600), color=ratio.color(spec)), segment.color="grey", show.legend=F) +
+  scale_y_continuous(sec.axis = sec_axis(~., breaks=mean(pgram$spec) + sd(pgram$spec) * c(1,3), labels=c("1", "2", "3")[c(1,3)], name="spectrum/sd ratio")) +
+  geom_hline(yintercept=(mean(pgram$spec) + sd(pgram$spec) * c(1:3)), linetype="dotted", color = ratio.color(mean(pgram$spec) + sd(pgram$spec) * c(1:3))) +
+  geom_point(data=data.frame(freq=top95freq, spec=top95pc), aes(freq, (spec), color=ratio.color(spec)), shape="o", size=4, show.legend = F) +
+  geom_label_repel(data=data.frame(freq=top95freq, spec=top95pc)[1:shown_labels,], aes(freq, (spec), label=round(1/freq/3600), color=ratio.color(spec)), segment.color="grey", show.legend=F) +
   scale_color_manual(values = c("darkgreen", "blue", "red")[start_ratio:3])
 
 
