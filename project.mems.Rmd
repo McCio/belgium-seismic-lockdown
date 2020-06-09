@@ -98,13 +98,13 @@ for (model in to_test) {
     residuals.pacf,
     nrow = 2
   ))
-  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)") + xlab(seasonality.xlab))
+  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab(data.lab) + xlab(seasonality.xlab))
   plots <- show_overlap_and_diff(
     seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
     base.desc = "training set",
     compare.desc = paste0("refit with ", plotting.forecast$method),
-    overlap.ylab = "Mean hourly movement (nm)",
-    diff.title = "Difference between ts",
+    overlap.ylab = data.lab,
+    diff.title = NULL,
     diff.ylab = "nm", diff.ylab.sec="%",
     diff.ylab.sec.accuracy = .01
   )
@@ -118,8 +118,8 @@ for (model in to_test) {
     seis.h.test, plotting.forecast$mean, xlab=seasonality.xlab,
     base.desc = "test set",
     compare.desc = paste0("forecast with ", plotting.forecast$method),
-    overlap.ylab = "Mean hourly movement (nm)",
-    diff.title = "Difference between ts",
+    overlap.ylab = data.lab,
+    diff.title = NULL,
     diff.ylab = "nm", diff.ylab.sec="%",
     diff.ylab.sec.accuracy = .01
   )
@@ -181,8 +181,8 @@ plots <- show_overlap_and_diff(
   seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
   base.desc = "train series",
   compare.desc = paste0("refit with ", plotting.forecast$method),
-  overlap.ylab = "Mean hourly movement (nm)",
-  diff.title = "Difference between ts",
+  overlap.ylab = data.lab,
+  diff.title = NULL,
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
   diff.ylab.sec.accuracy = .01
 )
@@ -191,8 +191,8 @@ plots <- show_overlap_and_diff(
   seis.h.test[1:length(plotting.forecast$mean)], plotting.forecast$mean, xlab=seasonality.xlab,
   base.desc = "test series",
   compare.desc = paste0("refit with ", plotting.forecast$method),
-  overlap.ylab = "Mean hourly movement (nm)",
-  diff.title = "Difference between ts",
+  overlap.ylab = data.lab,
+  diff.title = NULL,
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
   diff.ylab.sec.accuracy = .01
 )
@@ -239,7 +239,7 @@ plots <- show_overlap_and_diff(
   seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
   base.desc = "train series",
   compare.desc = paste0("refit with ", plotting.forecast$method),
-  overlap.ylab = "Mean hourly movement (nm)",
+  overlap.ylab = data.lab,
   diff.title = "Difference between ts",
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
   diff.ylab.sec.accuracy = .01
@@ -249,7 +249,7 @@ plots <- show_overlap_and_diff(
   seis.h.test[1:length(plotting.forecast$mean)], plotting.forecast$mean, xlab=seasonality.xlab,
   base.desc = "test series",
   compare.desc = paste0("refit with ", plotting.forecast$method),
-  overlap.ylab = "Mean hourly movement (nm)",
+  overlap.ylab = data.lab,
   diff.title = "Difference between ts",
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
   diff.ylab.sec.accuracy = .01

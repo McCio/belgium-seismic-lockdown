@@ -231,6 +231,8 @@ build_ts <- function(dset, periods=NULL, start=NULL, end=NULL, force_ms=T) {
 
 
 ```{r test_train split ts, include=FALSE}
+data.lab <- "Hourly mean (nm)"
+
 seis.h.start <- as_datetime('2018-10-29T00:00:00')
 seis.h.end <- as_datetime('2020-03-02T00:00:00') - seconds(1)
 seasonality.period <- 24
@@ -260,13 +262,13 @@ month.starts <- seq.POSIXt(from=floor_date(seis.h.start, 'month'), to=ceiling_da
 hours.from.start <- as.numeric(month.starts-seis.h.start)*24+168
 autoplot(seis.h.ts, type="l") +
   scale_x_continuous(breaks=hours.from.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + labs(title = "Training set", caption = "Data in original scale")
+  ylab(data.lab) + xlab(NULL) + labs(title = "Training set", caption = "Data in original scale")
 week.starts <- seq.POSIXt(from=floor_date(seis.h.start, 'week'), to=ceiling_date(seis.h.end, 'week'), by = "1 week")
 hours.from.start <- as.numeric(week.starts-seis.h.start)*24+168
 autoplot(seis.h.ts, type="l") +
   scale_x_continuous(breaks=hours.from.start/168, labels=format(week.starts, "%d-%m-%y"), limits = c(11,15)-3/24) +
   scale_y_continuous(limits = c(min(seis.h.ts[(10*168):(16*168)]), max(seis.h.ts[(10*168):(16*168)]))) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + labs(title = "Training set", subtitle = "4-weeks zoom", caption = "Data in original scale")
+  ylab(data.lab) + xlab(NULL) + labs(title = "Training set", subtitle = "4-weeks zoom", caption = "Data in original scale")
 dec.addi <- decompose(seasonality.aggregate(seis.h.ts))
 autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period)) + xlab("Weeks")
 ```
@@ -277,15 +279,15 @@ hours.from.train.start <- as.numeric(month.starts-seis.train.start)*24+168
 
 autoplot(seis.h.train, type="l") +
   scale_x_continuous(breaks=hours.from.train.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in original scale")
-gghistogram(seis.h.train, add.normal = T) + xlab("mean hourly movement (nm)") + labs(caption = "Data in original scale")
+  ylab(data.lab) + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in original scale")
+gghistogram(seis.h.train, add.normal = T) + xlab(data.lab) + labs(caption = "Data in original scale")
 gg_qqplot(seis.h.train) + 
   labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = "Data in original scale")
 
 autoplot(log(seis.h.train), type="l") +
   scale_x_continuous(breaks=hours.from.train.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in log-scale")
-gghistogram(log(seis.h.train), add.normal = T) + xlab("mean hourly movement (nm)") + labs(caption = "Data in log-scale")
+  ylab(data.lab) + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in log-scale")
+gghistogram(log(seis.h.train), add.normal = T) + xlab(data.lab) + labs(caption = "Data in log-scale")
 gg_qqplot(log(seis.h.train)) + 
   labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = "Data in log-scale")
 
@@ -293,8 +295,8 @@ train.bc.lambda <- BoxCox.lambda(seis.h.train)
 train.bc <- BoxCox(seis.h.train, train.bc.lambda)
 autoplot(train.bc, type="l") +
   scale_x_continuous(breaks=hours.from.train.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
-gghistogram(train.bc, add.normal = T) + xlab("mean hourly movement (nm)") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
+  ylab(data.lab) + xlab(NULL) + ggtitle("Training set") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
+gghistogram(train.bc, add.normal = T) + xlab(data.lab) + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
 gg_qqplot(train.bc) + 
   labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
 ```
@@ -394,7 +396,7 @@ show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, 
   overlap_plot <-
     autoplot(compare, xlab=xlab, ylab=overlap.ylab) +
       geom_line(aes(y=base, col="red"), show.legend = F) +
-      labs(title=paste0(base.desc, " vs ", compare.desc))
+      labs(title=NULL, subtitle=paste0(base.desc, " vs ", compare.desc))
   diff <- compare-base
 
   mse <- mean(diff^2, na.rm = T)
@@ -533,7 +535,7 @@ plots <- show_overlap_and_diff(
   seis.h.train, ts, xlab=seasonality.xlab,
   base.desc = "original series",
   compare.desc = "reconstructed serie (manual)",
-  overlap.ylab = "Mean hourly movement (nm)",
+  overlap.ylab = data.lab,
   diff.title = "Difference between ts",
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
   diff.ylab.sec.accuracy = .01
@@ -544,7 +546,7 @@ plots <- show_overlap_and_diff(
   seis.h.train, dec.addi$trend+dec.addi$seasonal+dec.addi$random, xlab=seasonality.xlab,
   base.desc = "original series",
   compare.desc = "reconstructed serie (decompose additive)",
-  overlap.ylab = "Mean hourly movement (nm)",
+  overlap.ylab = data.lab,
   diff.title = "Difference between ts",
   diff.ylab = "nm", diff.ylab.sec="% over ts span",
   diff.ylab.sec.accuracy = .01
@@ -633,7 +635,7 @@ plots <- show_overlap_and_diff(
   seasonbase.168$figure, season.168$figure + rep(season.24$figure, 7), xlab="Hours",
   base.desc = "168 from ds",
   compare.desc = "168+24 from ds",
-  overlap.ylab = "Mean hourly movement (nm)",
+  overlap.ylab = data.lab,
   diff.title = "Difference between 168",
   diff.ylab = "nm", diff.ylab.sec="% over season span",
   diff.ylab.sec.accuracy = .01

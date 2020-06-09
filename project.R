@@ -280,6 +280,7 @@ gc()
 
 
 
+data.lab <- "Hourly mean (nm)"
 # We now proceed selecting the dataset timespan for train and test subsets.
 # We will use the first 52 weeks starting from 2018-10-29 as training, and the following 18 weeks until 2020-03-02 as test
 seis.h.start <- as_datetime('2018-10-29T00:00:00')
@@ -316,7 +317,7 @@ show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, 
   overlap_plot <-
     autoplot(compare, xlab=xlab, ylab=overlap.ylab) +
     geom_line(aes(y=base, col="red"), show.legend = F) +
-    labs(title=paste0(base.desc, " vs ", compare.desc))
+    labs(title=NULL, subtitle=paste0(base.desc, " vs ", compare.desc))
   # The we compare the difference
   diff <- compare-base
   # Here we compute and print some error statistics
@@ -346,13 +347,13 @@ month.starts <- seq.POSIXt(from=floor_date(seis.h.start, 'month'), to=ceiling_da
 hours.from.start <- as.numeric(month.starts-seis.h.start)*24+168
 autoplot(seis.h.ts, type="l") +
   scale_x_continuous(breaks=hours.from.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + labs(title = "Training set", caption = "Data in original scale")
+  ylab(data.lab) + xlab(NULL) + labs(title = "Training set", caption = "Data in original scale")
 week.starts <- seq.POSIXt(from=floor_date(seis.h.start, 'week'), to=ceiling_date(seis.h.end, 'week'), by = "1 week")
 hours.from.start <- as.numeric(week.starts-seis.h.start)*24+168
 autoplot(seis.h.ts, type="l") +
   scale_x_continuous(breaks=hours.from.start/168, labels=format(week.starts, "%d-%m-%y"), limits = c(11,15)-3/24) +
   scale_y_continuous(limits = c(min(seis.h.ts[(10*168):(16*168)]), max(seis.h.ts[(10*168):(16*168)]))) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + labs(title = "Training set", subtitle = "4-weeks zoom", caption = "Data in original scale")
+  ylab(data.lab) + xlab(NULL) + labs(title = "Training set", subtitle = "4-weeks zoom", caption = "Data in original scale")
 # We see that the fluctuations doesn't seem to increase with the trend, so we use an additive decomposition
 dec.addi <- decompose(seasonality.aggregate(seis.h.ts))
 autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period)) + xlab("Weeks")
@@ -532,7 +533,7 @@ plots <- show_overlap_and_diff(
   seasonbase.168$figure, season.168$figure + rep(season.24$figure, 7), xlab="Hours",
   base.desc = "168 from ds",
   compare.desc = "168+24 from ds",
-  overlap.ylab = "Mean hourly movement (nm)",
+  overlap.ylab = data.lab,
   diff.title = "Difference between 168",
   diff.ylab = "nm", diff.ylab.sec="% over season span",
   diff.ylab.sec.accuracy = .01
@@ -578,15 +579,15 @@ hours.from.train.start <- as.numeric(month.starts-seis.train.start)*24+168
 # base dataset
 autoplot(seis.h.train, type="l") +
   scale_x_continuous(breaks=hours.from.train.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in original scale")
-gghistogram(seis.h.train, add.normal = T) + xlab("mean hourly movement (nm)") + labs(caption = "Data in original scale")
+  ylab(data.lab) + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in original scale")
+gghistogram(seis.h.train, add.normal = T) + xlab(data.lab) + labs(caption = "Data in original scale")
 gg_qqplot(seis.h.train) + 
   labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = "Data in original scale")
 # log transformation
 autoplot(log(seis.h.train), type="l") +
   scale_x_continuous(breaks=hours.from.train.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in log-scale")
-gghistogram(log(seis.h.train), add.normal = T) + xlab("mean hourly movement (nm)") + labs(caption = "Data in log-scale")
+  ylab(data.lab) + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in log-scale")
+gghistogram(log(seis.h.train), add.normal = T) + xlab(data.lab) + labs(caption = "Data in log-scale")
 gg_qqplot(log(seis.h.train)) + 
   labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = "Data in log-scale")
 # Box-Cox transformation with auto estimation of lambda by R
@@ -594,8 +595,8 @@ train.bc.lambda <- BoxCox.lambda(seis.h.train)
 train.bc <- BoxCox(seis.h.train, train.bc.lambda)
 autoplot(train.bc, type="l") +
   scale_x_continuous(breaks=hours.from.train.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
-gghistogram(train.bc, add.normal = T) + xlab("mean hourly movement (nm)") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
+  ylab(data.lab) + xlab(NULL) + ggtitle("Training set") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
+gghistogram(train.bc, add.normal = T) + xlab(data.lab) + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
 gg_qqplot(train.bc) + 
   labs(title="Q-Q plot for training dataset") + ylab("Sample quantiles") + labs(caption = paste0("Data Box-Cox transformed with lambda = ", train.bc.lambda))
 
@@ -725,8 +726,8 @@ for (model in to_test) {
     seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
     base.desc = "training set",
     compare.desc = paste0("refit with ", plotting.forecast$method),
-    overlap.ylab = "Mean hourly movement (nm)",
-    diff.title = "Difference between ts",
+    overlap.ylab = data.lab,
+    diff.title = NULL,
     diff.ylab = "nm", diff.ylab.sec="%",
     diff.ylab.sec.accuracy = .01
   )
@@ -748,7 +749,7 @@ for (model in to_test) {
     nrow = 2
   ))
   # plot forecasts
-  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)") + xlab(seasonality.xlab))
+  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab(data.lab) + xlab(seasonality.xlab))
   # print stats about data falling inside 80% and 90% CIs
   cat("Test set inside the CI\n")
   cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < seis.h.test & seis.h.test < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
@@ -758,8 +759,8 @@ for (model in to_test) {
     seis.h.test, plotting.forecast$mean, xlab=seasonality.xlab,
     base.desc = "test set",
     compare.desc = paste0("forecast with ", plotting.forecast$method),
-    overlap.ylab = "Mean hourly movement (nm)",
-    diff.title = "Difference between ts",
+    overlap.ylab = data.lab,
+    diff.title = NULL,
     diff.ylab = "nm", diff.ylab.sec="%",
     diff.ylab.sec.accuracy = .01
   )
@@ -808,7 +809,7 @@ lockdown.x <- as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/
 print(
   plot_forecast(plotting.forecast)
     + autolayer(ts_c(`Before March '20`=seis.h.test, `From March '20`=final.testing))
-    + ylab("Mean hourly movement (nm)")
+    + ylab(data.lab)
     + xlab("Weeks")
     + geom_vline(aes(xintercept=lockdown.x), linetype=2)
 )
@@ -834,8 +835,8 @@ plots <- show_overlap_and_diff(
   c(seis.h.test, final.testing), plotting.forecast$mean, xlab=seasonality.xlab,
   base.desc = "test set",
   compare.desc = paste0("forecast with ", plotting.forecast$method),
-  overlap.ylab = "Mean hourly movement (nm)",
-  diff.title = "Difference between ts",
+  overlap.ylab = data.lab,
+  diff.title = NULL,
   diff.ylab = "nm", diff.ylab.sec="%",
   diff.ylab.sec.accuracy = .01
 )
@@ -845,8 +846,8 @@ plots <- show_overlap_and_diff(
   seis.h.test, window(plotting.forecast$mean, start=c(53,1), end=c(70,168)), xlab=seasonality.xlab,
   base.desc = "test set before lockdown",
   compare.desc = paste0("forecast with ", plotting.forecast$method),
-  overlap.ylab = "Mean hourly movement (nm)",
-  diff.title = "Difference between ts",
+  overlap.ylab = data.lab,
+  diff.title = NULL,
   diff.ylab = "nm", diff.ylab.sec="%",
   diff.ylab.sec.accuracy = .01
 )
@@ -856,8 +857,8 @@ plots <- show_overlap_and_diff(
   final.testing, window(plotting.forecast$mean, start=c(71,1), end=c(78,168)), xlab=seasonality.xlab,
   base.desc = "test set during lockdown",
   compare.desc = paste0("forecast with ", plotting.forecast$method),
-  overlap.ylab = "Mean hourly movement (nm)",
-  diff.title = "Difference between ts",
+  overlap.ylab = data.lab,
+  diff.title = NULL,
   diff.ylab = "nm", diff.ylab.sec="%",
   diff.ylab.sec.accuracy = .01
 )
@@ -928,7 +929,7 @@ ggplot(data=seasonbase.before.lockdown.168.df) +
   geom_line(aes(Hour, figure + sd, col=Weekday), alpha=.1) +
   geom_ribbon(aes(Hour, ymin = figure - sd, ymax = figure + sd, fill = Weekday), alpha=0.1, show.legend=F) +
   geom_line(aes(Hour, figure, col=Weekday)) +
-  ylab("Mean hourly movement (nm)") +
+  ylab(data.lab) +
   labs(title="Seasonal plot: before lockdown") +
   scale_color_manual(values = rainbow(7), breaks=weekdays, aesthetics = c("colour", "fill"))
 ggplot(data=seasonbase.after.lockdown.168.df) +
@@ -936,6 +937,6 @@ ggplot(data=seasonbase.after.lockdown.168.df) +
   geom_line(aes(Hour, figure + sd, col=Weekday), alpha=.1) +
   geom_ribbon(aes(Hour, ymin = figure - sd, ymax = figure + sd, fill = Weekday), alpha=0.1, show.legend=F) +
   geom_line(aes(Hour, figure, col=Weekday)) +
-  ylab("Mean hourly movement (nm)") +
+  ylab(data.lab) +
   labs(title="Seasonal plot: after lockdown") +
   scale_color_manual(values = rainbow(7), breaks=weekdays, aesthetics = c("colour", "fill"))
