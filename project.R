@@ -748,7 +748,7 @@ for (model in to_test) {
     nrow = 2
   ))
   # plot forecasts
-  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)"))
+  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)") + xlab(seasonality.xlab))
   # print stats about data falling inside 80% and 90% CIs
   cat("Test set inside the CI\n")
   cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < seis.h.test & seis.h.test < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")

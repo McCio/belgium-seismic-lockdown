@@ -225,7 +225,7 @@ The aggregation was performed considering the mean total ground displacement, fo
 
 After aggregating by hour, the percentages of missing values remain quite stable. As can be seen from \figurename{s} \ref{missing-values-seconds:uccs} and \ref{missing-values-seconds:mems}, missing values at both stations are grouped in a few consecutive periods.
 To deal with them when R methods need complete timeseries, we define different completion strategies, depending on the seasonality, using the R function \texttt{na.aggregate}.
-
+%
 \begin{figure}[t]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/missing values hour analysis-1.pdf}
@@ -240,12 +240,12 @@ To deal with them when R methods need complete timeseries, we define different c
 	\caption{Missing values representation}
 	\label{missing-values-seconds}
 \end{figure}
-
+%
 \subsubsection{Seasonality assumptions}
 The already cited article \cite{NatureCoronavirusSeismic} suggests the existence of a weekly seasonality. Looking at the data it seems confirmed, in addition to a daily seasonality (\figurename~\ref{fig:zoom}).
 
 Since our main focus is on the seasonalities themselves, we aim to prevent assumptions based on this objective. In other words, we want to avoid searching for correlation with human activity while imposing human-based seasonality periods. Thus, we use an analytical method to extract seasonalities that the data itself suggests to us. Still, we recognize that the already performed transformations impose an human-based time alteration to the data itself (Section \ref{sec:cleanup-transform}).
-
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/whole data plot-2"}
@@ -260,7 +260,7 @@ Since our main focus is on the seasonalities themselves, we aim to prevent assum
 	\caption{Zoom from January $6^{th}$ to February $3^{rd}$ 2019}
 	\label{fig:zoom}
 \end{figure}
-
+%
 The method we are going to apply is based on the Fourier Transform (FT), and generates a \textit{periodgram} highlighting the most interesting frequencies that might correspond to a seasonality component.
 Applying the FT for any frequency, we transform our 1-dimensional data into a 2-dimensional data mapped around a circle. Then, we can sum all the resulting vectors (that are our new data points) to obtain a vector for each frequency, whose absolute value represents the power level of the same frequency. An high power level represents a significant periodicity on that frequency in our original data.
 
@@ -270,7 +270,7 @@ On this note we must specify that, when a significant periodicity is found, it i
 
 Since we apply this method on a dataset indexed by seconds, the transformation of the frequency $f$ into hourly periodicity $p$ is obtained by $p=(1/f)/3600$.
 We can analyse the resulting periodgrams for Uccle and Membach stations in \figurename{s} \ref{fig:periodgram:uccs} and \ref{fig:periodgram:mems}.
-
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/periodgram-1"}
@@ -285,7 +285,7 @@ We can analyse the resulting periodgrams for Uccle and Membach stations in \figu
 	\caption{Periodgram results}
 	\label{fig:periodgram}
 \end{figure}
-
+%
 Both highlight multiple 24-hour periodicities. This is given by approximation factors, since we round the divisions result to the nearest natural number. It also highlights that using a single 24-hour seasonality could leave some information on the remaining components. Still, in both stations it is the most significant periodicity.
 
 Both stations highlight a significant 168-hour (1-week) periodicity, that also confirms our initial assumptions.
@@ -317,8 +317,7 @@ In order to decompose our dataset into trend and seasonality(-ties) components, 
 	\item Remove the trend and the seasonal components to obtain the residuals
 \end{enumerate}
 While doing so, we tested different smoothing filters: simple filter (p=seasonality), Spencer's 15-point filter and MA smoothing filter (f=seasonality). Since they do not produce particularly different seasonalities, we choose to keep the results obtained by applying the MA smoothing filter, for its significance in terms of seasonally adjusted data.
-
-
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/extract both 24 and 168-1.pdf}
@@ -330,13 +329,10 @@ While doing so, we tested different smoothing filters: simple filter (p=seasonal
 		\caption{Membach station}
 		\label{fig:decomposed:mems}
 	\end{subfigure}
-	\begin{center}
-		\caption{Timeseries decomposition}{\small Only the second method results are shown for clarity}
-		\label{fig:decomposed}
-	\end{center}
+	\caption{Timeseries decomposition}{\centering\small Only the second method results are shown for clarity. Week 10 includes January $1^{st}$.\\}
+	\label{fig:decomposed}
 \end{figure}
-
-
+%
 Since the periodgrams suggested the presence of two significative periodicities, we also tested the extraction of both corresponding seasonalities:
 \begin{enumerate}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item Apply the MA smoothing filter (f=24) on the dataset to extract the trend component
@@ -347,7 +343,7 @@ Since the periodgrams suggested the presence of two significative periodicities,
 	\item Repeat steps 1-5 using the last deseasoned dataset until convergence (2-3 cycles)
 	\item Removing the last fitted trend and the two seasonalities we obtain the final residuals
 \end{enumerate}
-
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/extract both 24 and 168-2.pdf}
@@ -359,12 +355,10 @@ Since the periodgrams suggested the presence of two significative periodicities,
 		\caption{Membach station}
 		\label{fig:direct-multi-seasonality:mems}
 	\end{subfigure}
-	\begin{center}
-		\caption{Seasonality figures}{\small\textit{Direct} refers to single seasonality extraction\\\textit{Multi} refers to both seasonalities extracted at the same time}
-		\label{fig:direct-multi-seasonality}
-	\end{center}
+	\caption{Seasonality figures}{\centering\small\textit{Direct} refers to single seasonality extraction\\\centering\textit{Multi} refers to both seasonalities extracted at the same time\\}
+	\label{fig:direct-multi-seasonality}
 \end{figure}
-
+%
 In \figurename~\ref{fig:direct-multi-seasonality} we see both approaches applied to both stations. Those plots show interesting properties of our seasonalities, probably given by the method (local mean) and the fact that the weekly period is an exact multiple of the daily period:
 \begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item Both ways of extraction result in the same daily seasonality extracted
@@ -374,23 +368,31 @@ Given in particular the second property, we will only use the 168-hours seasonal
 
 In \figurename~\ref{fig:decomposed} we see the double decomposition results. While data from Uccle station have a clear significativity of both trend and seasonalities, data from Membach could seem not significant. Still, if we notice that the main timeseries lies between values of 0 and 100, we can find out that around half of the value will be composed by the trend, a 30\% by the joined seasonality components, and the remaining value by the residuals. We will need to apply some transformation to flatten the spikes that start from the middle of that dataset.
 
+From tha same decomposition results, we notice that data around January $1^{st}$ show a significant drop in values. That is highlighted by both trends, where the overall minimum falls in that period, and by the residuals for Uccle data, showing a clear overestimation.
 
 \section{Methodology}\label{sec:methodology}
 Having two different datasets, we will operate on them separately and then we will compare the model interpretation.
 
-For each station, we fit a model that generalises our training dataset in such a way that forecasting becomes effective, also assessing errors analytically.
+For each station, we fit a model that generalises our training dataset in such a way that forecasting until March $1^{st}$ becomes effective, also assessing errors analytically.
 Obtaining such a reliable model will be the first step to verify any significant difference forecasting over the lockdown period.
 
-The model we are going to estimate is the ARIMA model, including the seasonality components. To identify the order of the different components described by ARIMA, we will analyse the autocorrelation and partial autocorrelation of our datasets.
+The model we fit is the ARIMA model, including the seasonality components. To identify the order of the different components described by ARIMA, we will analyse the autocorrelation and partial autocorrelation of our datasets.
 As a reminder:
 \begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item non-seasonal AR process of order $p$ is described by an exponentially or sigmoidally decaying ACF, and by a cut-off of significant PACF values at lag $p$
 	\item non-seasonal MA process of order $q$ is described by an exponentially or sigmoidally decaying PACF, and by a cut-off of significant ACF values at lag $q$
-	\item seasonal AR process of order $P$ is described by an exponentially or sigmoidally decay at seasonal lags on ACF values, and by a cut-off of significant PACF values at each seasonal lag until the $P^{th}$
-	\item seasonal MA process of order $Q$ is described by an exponentially or sigmoidally decay at seasonal lags on PACF values, and by a cut-off of significant ACF values at each seasonal lag until the $Q^{th}$
+	\item seasonal AR process of order $P$ is described by an exponential or sigmoidal decay at seasonal lags on ACF values, and by a cut-off of significant PACF values at each seasonal lag until the $P^{th}$
+	\item seasonal MA process of order $Q$ is described by an exponential or sigmoidal decay at seasonal lags on PACF values, and by a cut-off of significant ACF values at each seasonal lag until the $Q^{th}$
 	\item given how significance is assessed for the ACF/PACF spikes, one over 20 spikes (5\%) could be \textit{coincidentally significant} or \textit{coincidentally \textbf{non}-significant}
 \end{itemize}
 
+The same model will be then used to forecast other 8 weeks from March $2^{nd}$, so that we can assess the forecast power over the lockdown period. Given the fact that both our series are quite stable over time (\figurename{s} \ref{fig:decomposed:uccs}, \ref{fig:mems:box-cox:data}), we can expect that the predicted variability for further forecasts will not significantly increase.
+
+Also, we will decompose the seasonalities from data before and after the lockdown, in order to assess any significant change regarding that aspect.
+
+Per our hypotesis, we expect the Uccle station's data to show significant changes after the lockdown, for its position near Brussels, while we expect Membach's forecasts not to show any significant change, for its position is further from busy cities.
+
+We will not directly compare the two models, since data from the two stations have different orders of magnitude.
 
 \subsection{Uccle station}
 \subsubsection{ARIMA}
@@ -402,12 +404,12 @@ After applying the \textit{diff} operator with lag 168, in conjunction with the 
 	\item from using both \textit{diff}s, the ACF and PACF on the long run hint to $\mathrm{ARIMA}(0,1,0)(0,1,1)_{168}$
 	\item from using just the lag 168 \textit{diff}, the PACF on the first lags and the ACF/PACF combination on the long run hint to $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$
 \end{itemize}
-We also employ the \textit{auto.arima} stepwise methodology\footnote{The \textit{auto.arima} stepwise methodology fits different ARIMA models within a range of orders. Based on each result's information criterion (Akaike), it changes each time one of the \textit{p}, \textit{d}, \textit{q}, \textit{P}, \textit{D}, or \textit{Q} values, depending on the configured limits. These changes minimizes the information criteria of the final model.}, locking the \textit{diff} values to 0 or 1, to get some hints on the possible models.
+We also employ the \textit{auto.arima} stepwise methodology\footnote{\label{footnote:auto.arima}The \textit{auto.arima} stepwise methodology fits different ARIMA models within a range of orders. Based on each result's information criterion (Akaike), it changes each time one of the \textit{p}, \textit{d}, \textit{q}, \textit{P}, \textit{D}, or \textit{Q} values, depending on the configured limits. These changes minimizes the information criteria of the final model.}, locking the \textit{diff} values to 0 or 1, to get some hints on the possible models.
 
-Following both the analytical ways and the \textit{auto.arima} hints, and refining the models through further inspection of ACF/PACF plots of the residuals, we end up with three characteristic models. We selected them through the Akaike Information Criterion (AIC)\footnote{Actually, we could have used the corrected AIC as it is usually more precise, but the values of AIC and AICc are equal to the first decimal for all our models ($\lesssim 10^{-7}\%$ difference).}, being the only three out of the fitted models with $\mathrm{AIC} < 120.000$: $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$, $\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$, and $\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$.
+Following both the analytical ways and the \textit{auto.arima} hints, and refining the models through further inspection of ACF/PACF plots of the residuals, we end up with three characteristic models. We selected them through the Akaike Information Criterion (AIC)\footnote{Actually, we could have used the corrected AIC (AICc) as it is usually more precise, but the values of AIC and AICc are equal to the first decimal for all our models ($\lesssim 10^{-7}\%$ difference).}, being the only three out of the fitted models with $\mathrm{AIC} < 120.000$: $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$, $\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$, and $\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$.
 
 Also checking the Mean Absolute Percentage Error (MAPE) on the training set, they actually have the lowest three values ($\mathrm{MAPE} < 6.2\%$). Nevertheless, MAPE is not a single valid criterion for selection, since a low error predicting the training set itself does not necessarily mean a good forecast power.
-
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=\linewidth]{project.uccs_files/figure-latex/arima-35}
@@ -419,18 +421,18 @@ Also checking the Mean Absolute Percentage Error (MAPE) on the training set, the
 		\caption{Q-Q plot}
 		\label{fig:arima-24}
 	\end{subfigure}
-	\begin{center}
-		\caption{Plots for $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$}
-		\label{fig:arima}
-	\end{center}
+	\caption{Plots for $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$}
+	\label{fig:arima}
 \end{figure}
-
-The ACF and PACF of the residuals for all three models are very similar (\figurename~\ref{fig:arima-26}), even if the models themselves have great differences in meaning and in number of parameters: they highlight a clear seasonal ARMA process with periodicity 24. This shows how our previous conclusion that the 168 hours seasonality could include the 24 hours one is flawed. Unfortunately, the parameters estimator we are using does not permit to estimate multiple seasonalities\footnote{\textit{Arima} method from the \textit{forecast} R package, only specifying the seasonal and non-seasonal orders.}.
+%
+The ACF and PACF of the residuals for all three models are very similar (\figurename~\ref{fig:arima-26}), even if the models themselves have great differences in meaning and in number of parameters: they highlight a clear seasonal ARMA process with periodicity 24. This shows how our previous conclusion that the 168 hours seasonality could include the 24 hours one is flawed. Unfortunately, the R function we are using does not permit to estimate multiple seasonalities\footnote{\textit{Arima} method from the \textit{forecast} R package, only specifying the seasonal and non-seasonal orders.}.
 
 Probably related to the 24 hours periodicity that remains on the residuals, together with the non-Normality of the original data, all Q-Q plots show clear divergence on both sides of the distribution (\figurename~\ref{fig:arima-24}). The Box-Pierce test statistics accept the independence hypothesis between residuals.
 
-Then, we assess how the forecasts behave on the test set. The MAPE for all three models more than doubles to around 17\% for $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ and around 15\% for the other two. This is expected, since normally the model is more fitted to the training data than to unknown future data. Also, it must be noted that a January $1^{st}$ period lies in our test dataset, and without being able to include a yearly seasonality, that leads to greater errors just from those couple of weeks (\figurename~\ref{fig:arima-forecast:200011}).
+Then, we assess how the forecasts behave on the test set. The MAPE for all three models more than doubles to around 17\% for $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ and around 15\% for the other two. This is expected, since normally the model is more fitted to the training data than to unknown future data.
 
+Also, it must be noted that a January $1^{st}$ period lies in our test dataset, that is already noticed as low-valued period (\figurename~\ref{fig:decomposed}). We can notice a clear overestimation during those couple of weeks (around week 62 on \figurename~\ref{fig:arima-forecast}).
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=1\linewidth]{project.uccs_files/figure-latex/arima-37}
@@ -442,12 +444,10 @@ Then, we assess how the forecasts behave on the test set. The MAPE for all three
 		\caption{$\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$}
 		\label{fig:arima-forecast:412011}
 	\end{subfigure}
-	\begin{center}
-		\caption{ARIMA forecasts}{\footnotesize$\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$ behaves like $\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$ with faster increasing variablity}
-		\label{fig:arima-forecast}
-	\end{center}
+	\caption{ARIMA forecasts}{\footnotesize$\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$ behaves like $\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$ with faster increasing variablity}
+	\label{fig:arima-forecast}
 \end{figure}
-
+%
 We can see in \figurename~\ref{fig:arima-forecast} the forecast behaviour for our models. We can appreciate the constant span of the confidence intervals in \figurename~\ref{fig:arima-forecast:200011}, in constrast with the more complex models that have increasing intervals further away from the training set. It must be noted that the increasing intervals include negative values, that are actually impossible to obtain given the data meaning (difference between maximum and minimum measurements).
 
 The increasing variability also make the percentage of test values falling inside the confidence intervals to be higher than normal:
@@ -457,7 +457,7 @@ The increasing variability also make the percentage of test values falling insid
 	\item $\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$: $\approx98\%$ of data is in the $80\%$ CI and $\approx99\%$ in the $95\%$ CI
 \end{itemize}
 
-Also, ARIMA parameters roots have values within the unit circle for the first two models, while for $\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$ two of the roots fall outside the unit circle, with values of $\approx1.49$ and $\approx1.80$.
+%Also, ARIMA parameters roots have values within the unit circle for the first two models, while for $\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$ two of the roots fall outside the unit circle, with values of $\approx1.49$ and $\approx-1.80$, making the models invalid.
 
 Given all these factors, we are confident choosing the $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ model, being aware of the missed 24 hours seasonality.
 
@@ -469,7 +469,7 @@ Given all these factors, we are confident choosing the $\mathrm{ARIMA}(2,0,0)(0,
 Similarly to data from Uccle, data from Membach doesn't respect the Normality assumption. We tested if the Q-Q plot showed significantly better approximation of the Normal distribution after applying the \textit{log} or \textit{Box-Cox} transformations, and the latter makes the data approach Normality with $\lambda\approx-1$ (\figurename~\ref{fig:mems:box-cox}). This solves the high peaks problem we already noticed while decomposing to highlight the trend and seasonalities.
 
 Since the $\lambda$ value approximately simplifies the Box-Cox transformation formula from $(y^\lambda-1)/\lambda$ into $(y-1)/y$, and since we only have positive values, all transformed values fall into the higher $0-1$ spectrum, in particular $0.95-1$ (\figurename~\ref{fig:mems:box-cox:data}). This will probably cause some approximation errors that could rig the final results.
-
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=1\linewidth]{"project.mems_files/figure-latex/training data transformation plots-7"}
@@ -481,21 +481,19 @@ Since the $\lambda$ value approximately simplifies the Box-Cox transformation fo
 		\caption{Normal vs. transformed data distribution}
 		\label{fig:mems:box-cox:qq}
 	\end{subfigure}
-	\begin{center}
-		\caption{Results of Box-Cox transformation}
-		\label{fig:mems:box-cox}
-	\end{center}
+	\caption{Results of Box-Cox transformation}
+	\label{fig:mems:box-cox}
 \end{figure}
+%
+The transformed data still shows no constant mean nor variance, even if they show less variability around the peaks with respect to the original data, confirmed by the Q-Q plot (\figurename~\ref{fig:mems:box-cox:qq}). Thus, we consider the usage of the \textit{diff} operator, at lag 1 and 168. Interestingly, the analysis of ACF and PACF plots hints to similar models to the untransformed Uccle data:
+$\mathrm{ARIMA}(0,1,0)(0,1,1)_{168}$ and $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$. All ACF and PACF plots for Membach model estimation are not shown for brevity.
 
-The transformed data still shows no constant mean, even if it has a way better shape than the original data, confirmed by the Q-Q plot (\figurename~\ref{fig:mems:box-cox:qq}). Thus, we consider the usage of the \textit{diff} operator, at lag 1 and 168. Interestingly, the analysis of ACF and PACF plots hints to similar models to the Uccle station:
-$\mathrm{ARIMA}(0,1,0)(0,1,1)_{168}$ and $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$.
+In this case, the employment of \textit{auto.arima} stepwise methodology$^{\ref{footnote:auto.arima}}$ highlights the first model improved with one non-seasonal MA parameter more. This is confirmed by the ACF/PACF of its residuals.
+The analysis of ACF/PACF plots of the residuals of the second model do not lead to any improvement.
+The ACF and PACF plots of both models are similar to the ones from the chosen model for the Uccle station (\figurename~\ref{fig:arima-24}), and we can notice the same 24 hours remaining periodicity.
 
-In this case, the employment of \textit{auto.arima} stepwise methodology\footnote{The \textit{auto.arima} stepwise methodology fits different ARIMA models within a range of orders. Based on each result's information criterion (Akaike), it changes each time one of the \textit{p}, \textit{d}, \textit{q}, \textit{P}, \textit{D}, or \textit{Q} values, depending on the configured limits. These changes minimizes the information criteria of the final model.} does not lead to any useful model, since it obtains $\mathrm{AIC}=\inf$ for the two manually-chosen models, that have an AIC value around -84.500, while the best model found by that methodology has an AIC around -81.000. This can be caused by approximation errors\footnote{The \textit{auto.arima} methodology was only used with initial approximation, due to high computing time.}, as we supposed earlier.
-
-The analysis of ACF/PACF plots of the residuals from both models do not lead to any new model but, as with the Uccle station, we can notice a clear 24 hours periodicity.
-
-Both models have valid p-value results for the Box-Pierce test, similar AICc values, and similar MAPE on the training set. Thus, we can assess the forecasts for both models in \figurename~\ref{fig:mems:arima}.
-
+The Box-Pierce test statistics for both models accept the independence hypothesis between residuals. The two models have similar AICc values, and similar MAPE on the training set ($\approx6\%$). Thus, we can assess the forecasts for both models in \figurename~\ref{fig:mems:arima}.
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=1\linewidth]{"project.mems_files/figure-latex/arima-21"}
@@ -507,13 +505,11 @@ Both models have valid p-value results for the Box-Pierce test, similar AICc val
 		\caption{$\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$}
 		\label{fig:mems:arima:200011}
 	\end{subfigure}
-	\begin{center}
-		\caption{ARIMA forecasts}
-		\label{fig:mems:arima}
-	\end{center}
+	\caption{ARIMA forecasts}
+	\label{fig:mems:arima}
 \end{figure}
-
-The first model catches a rapidly-increasing trend, while the latter predicts more stable values moving the most part of the increasing trend into increasing variability. Visually, both could be acceptable, even if the latter seems to better behave on \textit{normal} days losing precision on high-valued ones, while the first tries to better accomodate the high-valued days losing precision on the \textit{normal} ones.
+%
+The first model catches a rapidly-increasing trend, while the latter predicts more stable values moving the most part of the increasing trend into slightly increasing variability. Visually, both could be acceptable, even if the latter seems to better behave on \textit{normal} days losing precision on high-valued ones, while the first tries to better accomodate the high-valued days losing precision on the \textit{normal} ones.
 
 Analytically, we have quite a difference between the two models in terms of adherence of the confidence intervals:
 \begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
@@ -521,11 +517,16 @@ Analytically, we have quite a difference between the two models in terms of adhe
 	\item $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$: $\approx73\%$ of data is in the $80\%$ CI and $\approx89\%$ in the $95\%$ CI
 \end{itemize}
 As we see, the first model over-generalises the variability, while the latter seems more precise, even if losing some information. Also considering the MAPE on the test set, the latter model fits the data better with a $16\%$ error, instead of the $18\%$ for the first model.
-
-Parameters roots for both models have values within the unit circle.
+%
+%Parameters roots for both models have values within the unit circle.
 
 Thus, we can select the $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ model on the Box-Cox($\lambda\approx-1$) transformed data, still being aware of the missed 24 hours seasonality, similarly to the Uccle station.
 
+TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO 
+
+As a side note, we followed the same procedure without applying the Box-Cox transformation, but the best model that could be chosen had more parameters and was less precise than the chosen model on the transformed data.
+
+TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO 
 %\subsubsection{MSTL}
 
 \subsection{Lockdown influence}
@@ -535,7 +536,7 @@ Even if the two models have the same order, they cannot be directly compared usi
 We can still compare how the seasonalities differ with respect with each original dataset and between each other, by extracting the seasonalities for each station from before and after the lockdown (March $14^{th}$).
 
 We will highlight the confidence bands for an estimated error of 67\%. This interval estimation lies on the assumption that values for each single hour in the hourly/weekly seasonality is Normally distributed, a slightly different assumption that is not necessarily refuted by the already seen Q-Q plots.
-
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
 		\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/seasonalities/before-after-compare-1"}
@@ -547,13 +548,10 @@ We will highlight the confidence bands for an estimated error of 67\%. This inte
 		\caption{Membach station}
 		\label{fig:season.lockdown:mems}
 	\end{subfigure}
-	\begin{center}
-		\caption{Seasonalities computed before and after the lockdown}{\small Seasonalities extracted together, confidence bands $\pm\mathrm{sd}$}
-		\label{fig:season.lockdown}
-	\end{center}
+	\caption{Seasonalities computed before and after the lockdown}{\centering\small Seasonalities extracted together, confidence bands $\pm\mathrm{sd}$\\}
+	\label{fig:season.lockdown}
 \end{figure}
-
-
+%
 As we can see in \figurename~\ref{fig:season.lockdown}, the seasonalities' shapes seem different, in particular comparing the weekly seasonality. The seasonalities from before and after the lockdown are still included in the highlighted confidence bands, apart from a few hours. This is true for both stations.
 
 \begin{figure}[h]
@@ -567,32 +565,29 @@ As we can see in \figurename~\ref{fig:season.lockdown}, the seasonalities' shape
 		\caption{After lockdown}
 		\label{fig:season.lockdown:msa:mems}
 	\end{subfigure}
-	\begin{center}
-		\caption{Seasonal plots for Membach station}
-		\label{fig:season.lockdown:ms:mems}
-	\end{center}
+	\caption{Seasonal plots for Membach station}
+	\label{fig:season.lockdown:ms:mems}
 \end{figure}
-
+%
 The differences in shape are more highlighted checking the seasonal plots \cite{hyndman2018forecasting} in \figurename~\ref{fig:season.lockdown:ms:mems}. It is possible to notice a couple of changes: the Monday to Friday shapes are heavily flattened almost on the weekend values, and all the values are flattened towards 0. Both flattenings can be noticed checking the Uccle station, not showed for brevity.
 
 \subsubsection{Forecast divergence}
+%
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/final-model-7"}
+		\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/final-model-9"}
 		\caption{Uccle station}
 		\label{fig:forecast.lockdown:uccs}
 	\end{subfigure}
 	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/final-model-7"}
+		\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/final-model-9"}
 		\caption{Membach station}
 		\label{fig:forecast.lockdown:mems}
 	\end{subfigure}
-	\begin{center}
-		\caption{Forecasts from March $2^{nd}$.}{\small In red the actual values, in black the forecasts. March $14^{th}$ at midnight is highlighted.}
-		\label{fig:forecast.lockdown}
-	\end{center}
+	\caption{Forecasts from March $2^{nd}$.}{\centering\small In red the actual values, in black the forecasts. March $14^{th}$ at midnight is highlighted.\\}
+	\label{fig:forecast.lockdown}
 \end{figure}
-
+%
 By fitting the model\footnote{Data is different, because we are fitting the model on the original train+test dataset, but if we follow similar steps for both stations we can see that the final model we shall choose is the same. Also, the $\lambda$ parameter for the Box-Cox transformation of Membach data is estimated equally.} on data until March $1^{st}$ we can compute forecasts for 8 weeks ahead, until April $26^{th}$. As we can see in \figurename~\ref{fig:forecast.lockdown}, both stations overestimate starting after the lockdown. Uccle data in particular show a greater overestimation that can be noticed also by looking at the difference between the forecasted and measured values.
 
 Analytically, the MAPE for Uccle doubles with respect to the previous test set ($\approx34\%$), and only 58\% and 78\% of the test data falls inside the confidence intevals (80\% and 95\%). Analysing the Membach station, we find those measures have comparable values to the previous test set: the MAPE remains at $16.6\%$, while 74\% and 90\% of data falls inside the confidence intervals.

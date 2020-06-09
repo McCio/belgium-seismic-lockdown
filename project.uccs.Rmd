@@ -92,7 +92,7 @@ for (model in to_test) {
     residuals.pacf,
     nrow = 2
   ))
-  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)"))
+  print(plot_forecast(plotting.forecast) + autolayer(seis.h.test, series="Original") + ylab("Mean hourly movement (nm)") + xlab(seasonality.xlab))
   plots <- show_overlap_and_diff(
     seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
     base.desc = "training set",
