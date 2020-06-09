@@ -92,15 +92,15 @@ for (i in 1:length(seis.missing.ids)) {
 }
 blocks[nrow(blocks) + 1, ] <- c(block_start, block_end)
 blocks$interval <- seconds(blocks$end - blocks$start + 1)
-blocks$start <- seis.first.second + seconds(blocks$start - 1)
-blocks$end <- seis.first.second + seconds(blocks$end - 1)
+blocks$start <- seis.first.second + seconds(blocks$start + 1)
+blocks$end <- seis.first.second + seconds(blocks$end + 1)
 plot(blocks$start, blocks$interval,
      col=ifelse(blocks$interval<3600, "darkgreen", "darkred"),
      main="Consecutive seconds of missing values",
-     ylab="Seconds", xlab="Interval start",
+     ylab="Seconds", xlab="Interval start (mm-'yy)",
      xaxt="n", xlim=c(min(seis$utc_second), max(seis$utc_second))
 )
-axis.POSIXct(1, at=seq.POSIXt(from=min(seis$utc_second), to=max(seis$utc_second), by = "1 month"), format="%m-%y", cex=0.8)
+axis.POSIXct(1, at=seq.POSIXt(from=min(seis$utc_second), to=max(seis$utc_second), by = "1 month"), format="%m-'%y", cex=0.8)
 abline(h=3600, col="green", lty="dotted")
 legend("topleft", legend=c("interval >= 1h", "interval < 1h", "1h"), col=c("darkred", "darkgreen", "green"), lty=c(NA,NA,3), pch=c(1,1,NA),cex=0.9, bty="n")
 text(x=blocks$start[which(blocks$interval > 3600)], y=blocks$interval[which(blocks$interval > 3600)], labels = paste0(blocks$start[which(blocks$interval > 3600)], " - ", blocks$end[which(blocks$interval > 3600)]), cex=0.9, pos=4)
@@ -178,8 +178,8 @@ for (i in 1:length(seis.missing.ids)) {
 }
 blocks[nrow(blocks) + 1, ] <- c(block_start, block_end)
 blocks$interval <- hours(blocks$end - blocks$start + 1)
-blocks$start <- seis.first.second + seconds(blocks$start - 1)
-blocks$end <- seis.first.second + seconds(blocks$end - 1)
+blocks$start <- seis.first.second + hours(blocks$start + 1)
+blocks$end <- seis.first.second + hours(blocks$end + 1)
 plot(c(rbind(blocks$start, blocks$end, NA)), rep(hour(blocks$interval), each=3),
      col=ifelse(blocks$interval<3600, "darkgreen", "darkred"),
      main="Consecutive hours of missing values",
@@ -260,7 +260,13 @@ month.starts <- seq.POSIXt(from=floor_date(seis.h.start, 'month'), to=ceiling_da
 hours.from.start <- as.numeric(month.starts-seis.h.start)*24+168
 autoplot(seis.h.ts, type="l") +
   scale_x_continuous(breaks=hours.from.start/168, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in original scale")
+  ylab("mean hourly movement (nm)") + xlab(NULL) + labs(title = "Training set", caption = "Data in original scale")
+week.starts <- seq.POSIXt(from=floor_date(seis.h.start, 'week'), to=ceiling_date(seis.h.end, 'week'), by = "1 week")
+hours.from.start <- as.numeric(week.starts-seis.h.start)*24+168
+autoplot(seis.h.ts, type="l") +
+  scale_x_continuous(breaks=hours.from.start/168, labels=format(week.starts, "%d-%m-%y"), limits = c(11,15)-3/24) +
+  scale_y_continuous(limits = c(min(seis.h.ts[(10*168):(16*168)]), max(seis.h.ts[(10*168):(16*168)]))) +
+  ylab("mean hourly movement (nm)") + xlab(NULL) + labs(title = "Training set", subtitle = "4-weeks zoom", caption = "Data in original scale")
 dec.addi <- decompose(seasonality.aggregate(seis.h.ts))
 autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period)) + xlab("Weeks")
 ```

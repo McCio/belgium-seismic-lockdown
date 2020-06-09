@@ -117,10 +117,10 @@ seasonbase.before.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=season
 
 plot_grid(
   autoplot(ts(seasonbase.before.lockdown.24.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct daily"), size=1.5) +
-    geom_line(aes(y=season.before.lockdown.24.df$figure, col="Multi daily")) +
+    geom_line(aes(y=season.before.lockdown.24$figure, col="Multi daily")) +
     scale_colour_manual("", values=c("purple", "yellow"), breaks=c("Direct daily", "Multi daily")),
   autoplot(ts(seasonbase.before.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + geom_line(aes(col="Direct weekly"), size=1.5) +
-    geom_line(aes(y=season.before.lockdown.168.df$figure + rep(season.before.lockdown.24.df$figure, 7), col="Multi w+d")) +
+    geom_line(aes(y=season.before.lockdown.168.df$figure + rep(season.before.lockdown.24$figure, 7), col="Multi w+d")) +
     #geom_line(aes(y=rep(seasonbase.before.lockdown.24$figure, 7), col="Direct daily"), size=1.5) +
     #geom_line(aes(y=rep(season.before.lockdown.24$figure, 7), col="Multi daily")) +
     geom_line(aes(y=season.before.lockdown.168.df$figure, col="Multi weekly")) +

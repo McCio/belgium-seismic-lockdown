@@ -343,13 +343,19 @@ show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, 
 
 # We plot the dataset for a first visual inspection
 month.starts <- seq.POSIXt(from=floor_date(seis.h.start, 'month'), to=ceiling_date(seis.h.end, 'month'), by = "1 month")
-hours.from.start <- as.numeric(month.starts-seis.h.start)*24+seasonality.period
+hours.from.start <- as.numeric(month.starts-seis.h.start)*24+168
 autoplot(seis.h.ts, type="l") +
-  scale_x_continuous(breaks=hours.from.start/seasonality.period, labels=format(month.starts, "%m-%y")) +
-  ylab("mean hourly movement (nm)") + xlab(NULL) + ggtitle("Training set") + labs(caption = "Data in original scale")
+  scale_x_continuous(breaks=hours.from.start/168, labels=format(month.starts, "%m-%y")) +
+  ylab("mean hourly movement (nm)") + xlab(NULL) + labs(title = "Training set", caption = "Data in original scale")
+week.starts <- seq.POSIXt(from=floor_date(seis.h.start, 'week'), to=ceiling_date(seis.h.end, 'week'), by = "1 week")
+hours.from.start <- as.numeric(week.starts-seis.h.start)*24+168
+autoplot(seis.h.ts, type="l") +
+  scale_x_continuous(breaks=hours.from.start/168, labels=format(week.starts, "%d-%m-%y"), limits = c(11,15)-3/24) +
+  scale_y_continuous(limits = c(min(seis.h.ts[(10*168):(16*168)]), max(seis.h.ts[(10*168):(16*168)]))) +
+  ylab("mean hourly movement (nm)") + xlab(NULL) + labs(title = "Training set", subtitle = "4-weeks zoom", caption = "Data in original scale")
 # We see that the fluctuations doesn't seem to increase with the trend, so we use an additive decomposition
 dec.addi <- decompose(seasonality.aggregate(seis.h.ts))
-autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period)) + xlab(seasonality.xlab)
+autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period)) + xlab("Weeks")
 
 
 
