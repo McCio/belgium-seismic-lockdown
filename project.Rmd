@@ -69,7 +69,7 @@ remove(out_domain, invalid_values) # free ~350 Mb from RAM
 seis.complete <- seis %>% complete(utc_second=seq.POSIXt(from=min(seis$utc_second), to=max(seis$utc_second), by = as.difftime("0:0:1")))
 seis.first.second <- min(seis$utc_second)
 seis.missing.ids <- which(is.na(seis.complete$min))
-
+#seis.complete$utc_second[seis.missing.ids]
 seis.present <- length(seis$utc_second)
 seis.total <- length(seis.complete$utc_second)
 seis.missing <- seis.total - seis.present
@@ -104,7 +104,7 @@ axis.POSIXct(1, at=seq.POSIXt(from=min(seis$utc_second), to=max(seis$utc_second)
 abline(h=3600, col="green", lty="dotted")
 legend("topleft", legend=c("interval >= 1h", "interval < 1h", "1h"), col=c("darkred", "darkgreen", "green"), lty=c(NA,NA,3), pch=c(1,1,NA),cex=0.9, bty="n")
 text(x=blocks$start[which(blocks$interval > 3600)], y=blocks$interval[which(blocks$interval > 3600)], labels = paste0(blocks$start[which(blocks$interval > 3600)], " - ", blocks$end[which(blocks$interval > 3600)]), cex=0.9, pos=4)
-remove(seis.complete, seis.missing.ids)
+remove(seis.complete, seis.missing.ids, seis.present, seis.total, seis.missing, block_start, block_end, blocks)
 ```
 
 
@@ -155,7 +155,7 @@ gc()
 seis.complete <- seis.h %>% complete(utc_hour=seq.POSIXt(from=min(seis.h$utc_hour), to=max(seis.h$utc_hour), by = as.difftime("1:0:0")))
 seis.first.second <- min(seis$utc_second)
 seis.missing.ids <- which(is.na(seis.complete$mean_movement_s))
-
+# seis.complete$utc_hour[seis.missing.ids]
 seis.present <- length(seis.h$utc_hour)
 seis.total <- length(seis.complete$utc_hour)
 seis.missing <- seis.total - seis.present
@@ -192,9 +192,9 @@ text(x=blocks$start, y=hour(blocks$interval), labels = paste0(format(blocks$star
 text(x=blocks$end, y=hour(blocks$interval), labels = paste0(format(blocks$end, "%y-%m-%d %H:%M")), cex=0.9, pos=4)
 text(x=blocks$start + make_difftime(hour=sapply(hour(blocks$interval), "/", y=2)), y=hour(blocks$interval), labels = paste0(hour(blocks$interval), "H"), cex=0.9, pos=3)
 text(x=blocks$start + make_difftime(hour=sapply(hour(blocks$interval), "/", y=2)), y=hour(blocks$interval), labels = paste0(hour(blocks$interval), "H"), cex=0.9, pos=1)
-remove(seis.complete, seis.missing.ids)
-
+blocks$start
 blocks$interval
+remove(seis.complete, seis.missing.ids, seis.present, seis.total, seis.missing, block_start, block_end, blocks)
 
 ```
 
@@ -337,7 +337,7 @@ periodgram +
   geom_label_repel(data=data.frame(freq=top95freq, spec=top95pc)[1:shown_labels,], aes(freq, (spec), label=round(1/freq/3600), color=ratio.color(spec)), segment.color="grey", show.legend=F) +
   scale_color_manual(values = c("darkgreen", "blue", "red")[start_ratio:3])
 
-
+remove(pgram, pgram.data, filter_freq, top95pc, top95freq, top95seas.s, top95seas.h, ratio.color, periodgram)
 gc()
 ```
 
@@ -347,6 +347,7 @@ gc()
 seis.h.24 <- build_ts(seis.h.train, periods = c(24))
 seasonplot(seis.h.24, type="l", col=rainbow(7))
 legend("topleft", legend=weekdays(seis.train.start + (as.difftime(c(0:6), units="days"))), col=rainbow(7), lty=1, cex=0.8)
+remove(seis.h.24)
 
 plot_grid(
   autoplot(seis.h.train, main = "Hourly seismic movement", xlab = seasonality.xlab, ylab = "mean movement (nm)"),
@@ -356,7 +357,6 @@ plot_grid(
   autoplot(acf(seis.h.train, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
   autoplot(pacf(seis.h.train, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
   nrow = 2)
-
 ```
 Once notice the composition is additive (the fluctuations does not seem to grow with the trend)
 
@@ -458,11 +458,6 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 f <- seasonality.period
 weights.s <- c(0.5, rep(1,f-1), 0.5)/f
 trend.s <- stats::filter(seasonality.aggregate(seis.h.train), side=2, filter=weights.s)
-stats::filter(seasonality.aggregate(seis.h.train), sides=2, filter = weights.s) %>% autoplot()
-stats::filter(seasonality.aggregate(seis.h.train) %>% diff(), sides=2, filter = weights.s) %>% autoplot()
-stats::filter(seasonality.aggregate(seis.h.train) %>% diff(lag=168), sides=2, filter = weights.s) %>% autoplot()
-stats::filter(seasonality.aggregate(seis.h.train) %>% diff() %>% diff(lag=168), sides=2, filter = weights.s) %>% autoplot()
-mean((seasonality.aggregate(seis.h.train) %>% diff(lag=168))[(1+(168*4)):(1+(168*6))])
 
 plots <- show_overlap_and_diff(
   dec.addi$trend, trend.s, xlab=seasonality.xlab,
@@ -559,6 +554,11 @@ plot_grid(plots[[1]], plots[[2]], nrow = 2)
 ```
 
 
+```{r cleanup seasonalities}
+remove(matrix, weights, weights.s, ts)
+gc()
+```
+
 ### Multi trend extraction
 
 ```{r extract both 24 and 168}
@@ -640,6 +640,7 @@ plots <- show_overlap_and_diff(
 )
 plot_grid(plots[[1]], plots[[2]], nrow = 2)
 
+remove(aggregated)
 
 ```
 

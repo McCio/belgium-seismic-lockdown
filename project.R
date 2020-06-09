@@ -789,39 +789,49 @@ chosen.model <- c(2,0,0,0,1,1)
 # We make our final train/test split date on 2nd of March
 seis.test.final.start <- seis.test.end + seconds(1)
 seis.test.final.end <- seis.test.final.start + days(7*8) - seconds(1)
-final.training <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.end, force_ms = T)
 final.testing <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.final.end, force_ms = T)
 final.testing <- window(final.testing, start = c(end(final.training)[1] + 1, 1))
-if (!is.null(chosen.lambda)) {
-  cat(chosen.lambda, BoxCox.lambda(final.training), chosen.lambda == BoxCox.lambda(final.training), "\n")
-}
-# Then, we fit the chosen model on the new training set
+# Then, we forecast the chosen model until the end of April
 fit.name <- paste0("fit", paste0(chosen.model, collapse = ""))
-forecast.name <- paste0("forecast", paste0(chosen.model, collapse = ""))
-cat("SARIMA(", paste0(chosen.model[1:3], collapse = ","), ")(", paste0(chosen.model[4:6], collapse = ","), ")[", frequency(final.training), "]", sep = "")
-if (!exists("final.model")) {
-  cat(" fitting...")
-  final.model <- Arima(final.training, chosen.model[1:3], chosen.model[4:6], lambda=chosen.lambda)
-  cat("DONE")
-}
-if (!exists("final.forecast")) {
+plotting.model <- models[[fit.name]]
+cat("SARIMA(", paste0(chosen.model[1:3], collapse = ","), ")(", paste0(chosen.model[4:6], collapse = ","), ")[", seasonality.period, "]", sep = "")
+if (!exists("full.forecast")) {
   cat(" forecasting...")
-  final.forecast <- forecast(final.model, h=168*8, lambda=chosen.lambda)
+  full.forecast <- forecast(plotting.model, h=168*26, lambda = chosen.lambda)
   cat("DONE")
 }
 cat("\n")
+plotting.forecast <- full.forecast
 # We can directly assess how the forecasts behave
-plotting.model <- final.model
-plotting.forecast <- final.forecast
 # plot forecasts
-print(plot_forecast(plotting.forecast) + autolayer(final.testing, series="Original") + ylab("Mean hourly movement (nm)") + xlab("Weeks"))
+lockdown.x <- as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1
+print(
+  plot_forecast(plotting.forecast)
+    + autolayer(ts_c(`Before March '20`=seis.h.test, `From March '20`=final.testing))
+    + ylab("Mean hourly movement (nm)")
+    + xlab("Weeks")
+    + geom_vline(aes(xintercept=lockdown.x), linetype=2)
+)
 # print stats about data falling inside 80% and 90% CIs
 cat("Test set inside the CI\n")
-cat("80% CI \t ", print_dec(mean(plotting.forecast$lower[,1] < final.testing & final.testing < plotting.forecast$upper[,1], na.rm = T)*100), "%\n")
-cat("95% CI \t ", print_dec(mean(plotting.forecast$lower[,2] < final.testing & final.testing < plotting.forecast$upper[,2], na.rm = T)*100), "%\n")
-# plot overlap/difference with test data
+cat("CI   ", "Overall ", "Before  ", "After  \n")
+cat("80 % ",
+    print_dec(mean(plotting.forecast$lower[,1] < c(seis.h.test, final.testing) & c(seis.h.test, final.testing) < plotting.forecast$upper[,1], na.rm = T)*100),
+    "% ",
+    print_dec(mean(plotting.forecast$lower[full.forecast.before.ids,1] < seis.h.test & seis.h.test < plotting.forecast$upper[full.forecast.before.ids,1], na.rm = T)*100),
+    "% ",
+    print_dec(mean(plotting.forecast$lower[full.forecast.after.ids,1] < final.testing & final.testing < plotting.forecast$upper[full.forecast.after.ids,1], na.rm = T)*100),
+    "%\n")
+cat("95 % ",
+    print_dec(mean(plotting.forecast$lower[,2] < c(seis.h.test, final.testing) & c(seis.h.test, final.testing) < plotting.forecast$upper[,2], na.rm = T)*100),
+    "% ",
+    print_dec(mean(plotting.forecast$lower[full.forecast.before.ids,2] < seis.h.test & seis.h.test < plotting.forecast$upper[full.forecast.before.ids,2], na.rm = T)*100),
+    "% ",
+    print_dec(mean(plotting.forecast$lower[full.forecast.after.ids,2] < final.testing & final.testing < plotting.forecast$upper[full.forecast.after.ids,2], na.rm = T)*100),
+    "%\n")
+# plot overlap/difference with test data and correlated errors
 plots <- show_overlap_and_diff(
-  final.testing, plotting.forecast$mean, xlab=seasonality.xlab,
+  c(seis.h.test, final.testing), plotting.forecast$mean, xlab=seasonality.xlab,
   base.desc = "test set",
   compare.desc = paste0("forecast with ", plotting.forecast$method),
   overlap.ylab = "Mean hourly movement (nm)",
@@ -829,9 +839,29 @@ plots <- show_overlap_and_diff(
   diff.ylab = "nm", diff.ylab.sec="%",
   diff.ylab.sec.accuracy = .01
 )
+print(plot_grid(plots[[1]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), plots[[2]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), nrow = 2))
+
+plots <- show_overlap_and_diff(
+  seis.h.test, window(plotting.forecast$mean, start=c(53,1), end=c(70,168)), xlab=seasonality.xlab,
+  base.desc = "test set before lockdown",
+  compare.desc = paste0("forecast with ", plotting.forecast$method),
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="%",
+  diff.ylab.sec.accuracy = .01
+)
 print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
-# print accuracy statistics (different errors, mainly MAPE is considered)
-print(accuracy(plotting.forecast, seis.h.test))
+
+plots <- show_overlap_and_diff(
+  final.testing, window(plotting.forecast$mean, start=c(71,1), end=c(78,168)), xlab=seasonality.xlab,
+  base.desc = "test set during lockdown",
+  compare.desc = paste0("forecast with ", plotting.forecast$method),
+  overlap.ylab = "Mean hourly movement (nm)",
+  diff.title = "Difference between ts",
+  diff.ylab = "nm", diff.ylab.sec="%",
+  diff.ylab.sec.accuracy = .01
+)
+print(plot_grid(plots[[1]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), plots[[2]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), nrow = 2))
 
 
 
@@ -871,6 +901,7 @@ season.after.lockdown.24 <- trend_season(aggregated.after.lockdown-season.after.
 season.after.lockdown.168 <- trend_season(aggregated.after.lockdown-season.after.lockdown.24$seasonal, 168)
 season.after.lockdown.24 <- trend_season(aggregated.after.lockdown-season.after.lockdown.168$seasonal, 24)
 season.after.lockdown.168 <- trend_season(aggregated.after.lockdown-season.after.lockdown.24$seasonal, 168)
+# building dataframes we reorder data to have weekdays in order Monday->Sunday
 season.after.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=season.after.lockdown.168$figure[c(49:168,1:48)], sd=season.after.lockdown.168$sd[c(49:168,1:48)], Weekday=rep(weekdays, each=24))
 seasonbase.after.lockdown.168 <- trend_season(aggregated.after.lockdown, 168)
 seasonbase.after.lockdown.168.df <- data.frame(Hour=rep(1:24, 7), figure=seasonbase.after.lockdown.168$figure[c(49:168,1:48)], sd=seasonbase.after.lockdown.168$sd[c(49:168,1:48)], Weekday=rep(weekdays, each=24))

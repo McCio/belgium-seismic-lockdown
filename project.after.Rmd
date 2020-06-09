@@ -9,7 +9,7 @@ c(seis.train.start, seis.test.final.start, seis.test.final.end)
 
 final.training <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.end, force_ms = T)
 final.testing <- build_ts(seis.h, periods = c(seasonality.period), start = seis.train.start, end = seis.test.final.end, force_ms = T)
-final.testing <- window(final.testing, start = c(end(final.training)[1] + 1, 1))
+final.testing <- window(final.testing, start = c(end(seis.h.test)[1] + 1, 1))
 if (!is.null(chosen.lambda)) {
   cat(chosen.lambda, BoxCox.lambda(final.training), chosen.lambda == BoxCox.lambda(final.training), "\n")
 }
@@ -38,7 +38,14 @@ print(plot_grid(
   residuals.pacf,
   nrow = 2
 ))
-print(plot_forecast(plotting.forecast) + autolayer(ts_c(`Before March '20`=seis.h.test, `From March '20`=final.testing), series="Original") + ylab("Mean hourly movement (nm)") + xlab("Weeks") + geom_vline(aes(xintercept=as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1), linetype=2))
+lockdown.x <- as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1
+print(
+  plot_forecast(plotting.forecast)
+      + autolayer(ts_c(`Before March '20`=seis.h.test, `From March '20`=final.testing))
+      + ylab("Mean hourly movement (nm)")
+      + xlab("Weeks")
+      + geom_vline(aes(xintercept=lockdown.x), linetype=2)
+)
 plots <- show_overlap_and_diff(
   seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
   base.desc = "training set",
@@ -49,22 +56,26 @@ plots <- show_overlap_and_diff(
   diff.ylab.sec.accuracy = .01
 )
 print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
-
+seis.h.test.len <- length(seis.h.test)
+final.testing.len <- length(final.testing)
+full.forecast.len <- seis.h.test.len + final.testing.len
+full.forecast.before.ids <- 1:seis.h.test.len
+full.forecast.after.ids <- (seis.h.test.len+1):full.forecast.len
 cat("Test set inside the CI\n")
 cat("CI   ", "Overall ", "Before  ", "After  \n")
 cat("80 % ",
     print_dec(mean(plotting.forecast$lower[,1] < c(seis.h.test, final.testing) & c(seis.h.test, final.testing) < plotting.forecast$upper[,1], na.rm = T)*100),
     "% ",
-    print_dec(mean(plotting.forecast$lower[1:length(seis.h.test),1] < seis.h.test & seis.h.test < plotting.forecast$upper[1:length(seis.h.test),1], na.rm = T)*100),
+    print_dec(mean(plotting.forecast$lower[full.forecast.before.ids,1] < seis.h.test & seis.h.test < plotting.forecast$upper[full.forecast.before.ids,1], na.rm = T)*100),
     "% ",
-    print_dec(mean(plotting.forecast$lower[(length(seis.h.test)+1):dim(plotting.forecast$lower)[1],1] < final.testing & final.testing < plotting.forecast$upper[(length(seis.h.test)+1):dim(plotting.forecast$lower)[1],1], na.rm = T)*100),
+    print_dec(mean(plotting.forecast$lower[full.forecast.after.ids,1] < final.testing & final.testing < plotting.forecast$upper[full.forecast.after.ids,1], na.rm = T)*100),
     "%\n")
 cat("95 % ",
     print_dec(mean(plotting.forecast$lower[,2] < c(seis.h.test, final.testing) & c(seis.h.test, final.testing) < plotting.forecast$upper[,2], na.rm = T)*100),
     "% ",
-    print_dec(mean(plotting.forecast$lower[1:length(seis.h.test),2] < seis.h.test & seis.h.test < plotting.forecast$upper[1:length(seis.h.test),2], na.rm = T)*100),
+    print_dec(mean(plotting.forecast$lower[full.forecast.before.ids,2] < seis.h.test & seis.h.test < plotting.forecast$upper[full.forecast.before.ids,2], na.rm = T)*100),
     "% ",
-    print_dec(mean(plotting.forecast$lower[(length(seis.h.test)+1):dim(plotting.forecast$lower)[1],2] < final.testing & final.testing < plotting.forecast$upper[(length(seis.h.test)+1):dim(plotting.forecast$lower)[1],2], na.rm = T)*100),
+    print_dec(mean(plotting.forecast$lower[full.forecast.after.ids,2] < final.testing & final.testing < plotting.forecast$upper[full.forecast.after.ids,2], na.rm = T)*100),
     "%\n")
 
 plots <- show_overlap_and_diff(
@@ -76,10 +87,7 @@ plots <- show_overlap_and_diff(
   diff.ylab = "nm", diff.ylab.sec="%",
   diff.ylab.sec.accuracy = .01
 )
-print(plot_grid(plots[[1]] + geom_vline(aes(xintercept=as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1), linetype=2),
-                plots[[2]] + geom_vline(aes(xintercept=as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1), linetype=2),
-                nrow = 2
-                ))
+print(plot_grid(plots[[1]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), plots[[2]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), nrow = 2))
 
 plots <- show_overlap_and_diff(
   seis.h.test, window(plotting.forecast$mean, start=c(53,1), end=c(70,168)), xlab=seasonality.xlab,
@@ -90,10 +98,7 @@ plots <- show_overlap_and_diff(
   diff.ylab = "nm", diff.ylab.sec="%",
   diff.ylab.sec.accuracy = .01
 )
-print(plot_grid(plots[[1]],
-                plots[[2]],
-                nrow = 2
-                ))
+print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
 
 plots <- show_overlap_and_diff(
   final.testing, window(plotting.forecast$mean, start=c(71,1), end=c(78,168)), xlab=seasonality.xlab,
@@ -104,10 +109,7 @@ plots <- show_overlap_and_diff(
   diff.ylab = "nm", diff.ylab.sec="%",
   diff.ylab.sec.accuracy = .01
 )
-print(plot_grid(plots[[1]] + geom_vline(aes(xintercept=as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1), linetype=2),
-                plots[[2]] + geom_vline(aes(xintercept=as.integer(as_datetime('2020-03-14T00:00:00') - seis.train.start)/7+1), linetype=2),
-                nrow = 2
-                ))
+print(plot_grid(plots[[1]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), plots[[2]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), nrow = 2))
 
 print(accuracy(plotting.forecast, c(seis.h.test, final.testing)))
 # qqPlot(plotting.model$residuals, main = paste0("Q-Q plot for ", plotting.forecast$method), xlab = "residuals")
