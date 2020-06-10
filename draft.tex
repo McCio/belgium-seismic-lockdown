@@ -391,7 +391,7 @@ Also, we will decompose the seasonalities from data before and after the lockdow
 
 Per our hypotesis, we expect the Uccle station's data to show significant changes after the lockdown, for its position near Brussels, while we expect Membach's forecasts not to show any significant change, for its position is further from busy cities.
 
-We will not directly compare the two models, since data from the two stations have different orders of magnitude.
+We will not directly compare the two models, since data from the two stations have different orders of magnitude, and that difference should be firstly assessed in order to meaningfully compare the models.
 
 \subsection{Uccle station}
 \subsubsection{ARIMA}
@@ -493,11 +493,10 @@ Since the $\lambda$ value approximately simplifies the Box-Cox transformation fo
 %
 The transformed data still shows no constant mean nor variance, even if they show less variability around the peaks with respect to the original data, confirmed by the Q-Q plot (\figurename~\ref{fig:mems:box-cox:qq}). Thus, we consider the usage of the \textit{diff} operator, at lag 1 and 168. The analysis of ACF and PACF plots hints to two models: $\mathrm{ARIMA}(0,1,0)(0,1,1)_{168}$ and $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$. All ACF and PACF plots for Membach model estimation are not shown for brevity.
 
-In this case, the employment of \textit{auto.arima} stepwise methodology$^{\ref{footnote:auto.arima}}$ highlights the first model improved with one non-seasonal MA parameter more. This is confirmed by the ACF/PACF of its residuals.
-The analysis of ACF/PACF plots of the residuals of the second model do not lead to any improvement.
+In this case, the employment of \textit{auto.arima} stepwise methodology$^{\ref{footnote:auto.arima}}$ highlights the first model improved with one non-seasonal MA parameter more. This is confirmed by the ACF/PACF plots of its residuals. Their analysis for the second model do not lead to any improvement.
 The ACF and PACF plots of both models are similar to the ones from the chosen model for the Uccle station (\figurename~\ref{fig:arima-24}), and we can notice the same 24 hours remaining periodicity.
 
-The Box-Pierce test statistics for both models accept the independence hypothesis between residuals. The two models have similar AICc values, and similar MAPE on the training set ($\approx6\%$). Thus, we can assess the forecasts for both models in \figurename~\ref{fig:mems:arima}.
+The Box-Pierce test statistics for both models accept the independence hypothesis between residuals. The two models have similar AIC values, and similar MAPE on the training set ($\approx6\%$). Thus, we can assess the forecasts for both models in \figurename~\ref{fig:mems:arima}.
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
@@ -529,7 +528,7 @@ As we see, the first model over-generalises the variability, while the latter se
 
 Thus, we can select the $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ model on the Box-Cox($\lambda\approx-1$) transformed data, still being aware of the missed 24 hours seasonality, similarly to the Uccle station.
 
-Since checking the ACF and PACF plots for the original data could lead to a model with the same order, we fitted it for comparison. The MAPEs are higher but comparable, $7\%$ on the test set and $19\%$ on the train set, the Box-Pierce test refutes the independence between residuals, and $88\%/94\%$ of test data fits inside the $80\%$ and $95\%$ CI. Finally, it shows a variability that tends to admit lower values than the training data shows, including negative ones, while having a lower acceptance for higher values. We omit plots related to this model, since such results confirm the usage of the already selected model on the transformed data.
+Since checking the ACF and PACF plots for the original data could lead to a model with the same order, we fitted it for comparison. The MAPEs are higher but comparable, $7\%$ on the test set and $19\%$ on the train set, the Box-Pierce test refutes the independence between residuals, and $88\%/94\%$ of test data fits inside the $80\%$ and $95\%$ CI. Finally, it shows a variability that tends to admit lower values than the training data shows, including negative ones, while having a lower acceptance for higher values. We omit plots related to this model, since such results confirm the choice of the model on the transformed data.
 
 It is important to highlight that no model we assessed found any pattern for predicting the high-valued spikes.
 %\subsubsection{MSTL}
@@ -538,9 +537,6 @@ It is important to highlight that no model we assessed found any pattern for pre
 Even if the two models have the same order, they cannot be directly compared using the Information Criteria, for the Membach model works after a transformation pass, and they are fitted from different data.
 
 Still, we can assess how the lockdown period is forecasted for both stations, and then compare their efficency. Also, we can extract the seasonalities, using the same MA filters we already used, separately from the periods before and during the lockdown, and compare also these results.
-
-\subsubsection{Seasonalities divergence}
-We will highlight the confidence bands for an estimated error of 67\%. This interval estimation lies on the assumption that values for each single hour in the hourly/weekly seasonality is Normally distributed, a slightly different assumption that is not necessarily refuted by the already seen Q-Q plots.
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
@@ -557,6 +553,9 @@ We will highlight the confidence bands for an estimated error of 67\%. This inte
 	\label{fig:season.lockdown}
 \end{figure}
 %
+\subsubsection{Seasonalities divergence}
+We highlight the confidence bands for an estimated error of 67\%. This interval estimation lies on the assumption that values for each single hour in the hourly/weekly seasonality is Normally distributed, a slightly different assumption that is not necessarily refuted by the already seen Q-Q plots.
+
 As we can see in \figurename~\ref{fig:season.lockdown}, the seasonalities' shapes seem different, in particular comparing the weekly seasonality. The seasonalities from before and after the lockdown are still included in the highlighted confidence bands, apart from a few hours. This is true for both stations.
 
 \begin{figure}[h]
@@ -577,15 +576,18 @@ As we can see in \figurename~\ref{fig:season.lockdown}, the seasonalities' shape
 The differences in shape are more highlighted checking the seasonal plots \cite{hyndman2018forecasting} in \figurename~\ref{fig:season.lockdown:ms:mems}. It is possible to notice a couple of changes: the Monday to Friday shapes are heavily flattened almost on the weekend values, and all the values are flattened towards 0. Both flattenings can be noticed also checking the Uccle station, not showed for brevity.
 
 \subsubsection{Forecast divergence}
+Since both our models forecast stable values with almost stable variance (\figurename{s}~\ref{fig:arima-forecast:200011}, \ref{fig:mems:arima:200011}), we can forecast another 8 weeks ahead, until April $26^{th}$, and then compare the efficency of the results with the original test set. These 8 weeks comprise 6 weeks after March $14^{th}$, first day of lockdown in Belgium.
+
+As we can see in \figurename~\ref{fig:forecast.lockdown}, at both stations the models overestimate starting after the lockdown. Uccle data in particular show a greater overestimation, that can also be noticed by looking at the difference between the forecasted and measured values.
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/final-model-9"}
+		\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/final-model-5"}
 		\caption{Uccle station}
 		\label{fig:forecast.lockdown:uccs}
 	\end{subfigure}
 	\begin{subfigure}{.5\linewidth}
-		\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/final-model-9"}
+		\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/final-model-5"}
 		\caption{Membach station}
 		\label{fig:forecast.lockdown:mems}
 	\end{subfigure}
@@ -593,9 +595,14 @@ The differences in shape are more highlighted checking the seasonal plots \cite{
 	\label{fig:forecast.lockdown}
 \end{figure}
 %
-By fitting the model\footnote{Data is different, because we are fitting the model on the original train+test dataset, but if we follow similar steps for both stations we can see that the final model we shall choose is the same. Also, the $\lambda$ parameter for the Box-Cox transformation of Membach data is estimated equally.} on data until March $1^{st}$ we can compute forecasts for 8 weeks ahead, until April $26^{th}$. As we can see in \figurename~\ref{fig:forecast.lockdown}, both stations overestimate starting after the lockdown. Uccle data in particular show a greater overestimation that can be noticed also by looking at the difference between the forecasted and measured values.
+We assess analytical values obtained from the new 8 weeks forecast:
+\begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
+	\item the MAPE for Uccle triples with respect to the original test set to $\approx46\%$, and only 39\% and 63\% of the test data falls inside the confidence intevals (80\% and 95\%).
+	\item regarding the Membach station forecasts, the MAPE is reduced to $14\%$, while 82\% and 96\% of data falls inside the confidence intervals.
+\end{itemize}
 
-Analytically, the MAPE for Uccle doubles with respect to the previous test set ($\approx34\%$), and only 58\% and 78\% of the test data falls inside the confidence intevals (80\% and 95\%). Analysing the Membach station, we find those measures have comparable values to the previous test set: the MAPE remains at $16.6\%$, while 74\% and 90\% of data falls inside the confidence intervals.
+Thus, we notice a visible degradation in performance for Uccle station data, and a slight improvement for Membach station's. The slight improvement is most certainly driven by the single peak, with lower values than previous peaks, and by the increased variability for data further from the end of the training set.
+
 
 %MEMS
 %Test set inside the CI
@@ -617,6 +624,8 @@ Analytically, the MAPE for Uccle doubles with respect to the previous test set (
 %Membach: remodel on 52+18 (until 1st March 2020), forecast 2 months (8 weeks) => diff in MAPE
 
 \section{Conclusions}
+The models we choose for both stations show interesting predictive efficiency, 
+
 TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO 
 
 Interestingly, the analysis of ACF and PACF plots for Membach hints to similar models to the untransformed Uccle data:
@@ -631,6 +640,9 @@ forecast residuals of model with 24h seasonality, and
 seasonalities divergence -> check normality assumption for each hour to validate the gaussian-empirical confidence bands
 
 The main problems of this projects that we identified are multiple seasonalities and the Normality assumption.
+
+% comment by prof on some arima plots
+% If you're trying to compare what happens before and after lock-down, you should probably assess the forecast for the period without lock-down and then compare with how it performs for forecasting lock-down values. A large difference (forecast performing worse during lock-down) would indicate that the model doesn't work during lock-down because something has changed in the behaviour of the data, thus confirming your hypothesis
 
 The tested models do not effectively include both daily and weekly seasonalities, even if initially we thought so. Also they cannot include the apparent yearly seasonality, mainly because of the short timeseries.
 To overcome this limitation, we could try different models, also ARIMA-based, that can estimate multiple seasonalities. The first that we tested models seasonalites through Fourier terms. The main problem that lead us not to go further with that approach is that our seasonalities cannot be expressed by a combination of few sine and cosine curves. This requires a high number of curves to estimate, that requires an heavy computational power.
