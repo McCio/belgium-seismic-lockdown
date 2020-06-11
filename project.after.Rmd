@@ -45,6 +45,7 @@ print(
       + ylab(data.lab)
       + xlab("Weeks")
       + geom_vline(aes(xintercept=lockdown.x), linetype=2)
+      + scale_color_viridis_d()
 )
 plots <- show_overlap_and_diff(
   seis.h.train, plotting.forecast$fitted, xlab=seasonality.xlab,
@@ -200,13 +201,13 @@ plot_grid(
 ```{r seasonalities/before-after-compare}
 
 plot_grid(
-  autoplot(ts(season.after.lockdown.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+  autoplot(ts(season.after.lockdown.24$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + labs(subtitle = "Daily seasonality", title=NULL) +
     geom_ribbon(aes(ymin = season.after.lockdown.24$figure  - season.after.lockdown.24$sd,  ymax = season.after.lockdown.24$figure  + season.after.lockdown.24$sd),  alpha=0.5, fill = "mediumpurple1") +
     geom_line(aes(col="After lockdown")) +
     geom_ribbon(aes(ymin = season.before.lockdown.24$figure - season.before.lockdown.24$sd, ymax = season.before.lockdown.24$figure + season.before.lockdown.24$sd), alpha=0.5, fill = "lightcoral") +
     geom_line(aes(y=season.before.lockdown.24$figure, col="Before lockdown")) +
     scale_colour_manual("", values=c("purple", "red"), breaks=c("After lockdown", "Before lockdown")),
-  autoplot(ts(season.after.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+  autoplot(ts(season.after.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + labs(subtitle = "Weekly seasonality", title=NULL) +
     geom_ribbon(aes(ymin = season.after.lockdown.168.df$figure  - season.after.lockdown.168.df$sd,  ymax = season.after.lockdown.168.df$figure  + season.after.lockdown.168.df$sd),  alpha=0.5, fill = "mediumpurple1") +
     geom_line(aes(col="After lockdown")) +
     geom_ribbon(aes(ymin = season.before.lockdown.168.df$figure - season.before.lockdown.168.df$sd, ymax = season.before.lockdown.168.df$figure + season.before.lockdown.168.df$sd), alpha=0.5, fill = "lightcoral") +
@@ -215,7 +216,7 @@ plot_grid(
   nrow = 2)
 
 
-autoplot(ts(seasonbase.after.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() +
+autoplot(ts(seasonbase.after.lockdown.168.df$figure, frequency=1)) + ylab("") + xlab("Hours") + scale_x_continuous() + labs(subtitle = "Complete weekly seasonality", title=NULL) +
   geom_ribbon(aes(ymin = (seasonbase.after.lockdown.168.df$figure - seasonbase.after.lockdown.168.df$sd), ymax = (seasonbase.after.lockdown.168.df$figure + seasonbase.after.lockdown.168.df$sd)), fill = "mediumpurple1", alpha=0.5) +
   geom_line(aes(col="After lockdown")) +
   geom_ribbon(aes(ymin = seasonbase.before.lockdown.168.df$figure - seasonbase.before.lockdown.168.df$sd, ymax = seasonbase.before.lockdown.168.df$figure + seasonbase.before.lockdown.168.df$sd), fill = "lightcoral", alpha=0.5) +

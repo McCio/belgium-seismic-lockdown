@@ -812,6 +812,7 @@ print(
     + ylab(data.lab)
     + xlab("Weeks")
     + geom_vline(aes(xintercept=lockdown.x), linetype=2)
+    + scale_color_viridis_d()
 )
 # print stats about data falling inside 80% and 90% CIs
 cat("Test set inside the CI\n")

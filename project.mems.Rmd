@@ -68,7 +68,7 @@ if (!exists("models")){
 }
 
 for (model in to_test) {
-  # model <- c(4,1,2,0,1,0)
+  # model <- c(2,0,0,0,1,1)
   fit.name <- paste0("fit", paste0(model, collapse = ""))
   forecast.name <- paste0("forecast", paste0(model, collapse = ""))
   cat("SARIMA(", paste0(model[1:3], collapse = ","), ")(", paste0(model[4:6], collapse = ","), ")[", frequency(seis.h.train), "]", sep = "")

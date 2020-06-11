@@ -116,7 +116,7 @@
 \newcommand*\mean[1]{\overline{#1}}
 \DeclareMathOperator*{\simf}{sim}
 
-\title{Seismic Time Series Analysis\\Statistics for Spatio-Temporal Data\\\textit{-- project draft --}}
+\title{Seismic Time Series Analysis\\Statistics for Spatio-Temporal Data}
 \author{Marco Ciotola, 848222}
 \date{\today}
 
@@ -591,7 +591,7 @@ As we can see in \figurename~\ref{fig:forecast.lockdown}, at both stations the m
 		\caption{Membach station}
 		\label{fig:forecast.lockdown:mems}
 	\end{subfigure}
-	\caption{Forecasts from March $2^{nd}$.}{\centering\small In red the actual values, in black the forecasts. March $14^{th}$ at midnight is highlighted.\\}
+	\caption{Forecasts from March $2^{nd}$.}{\centering\small The forecasted values are on the background. March $14^{th}$ at midnight is highlighted.\\}
 	\label{fig:forecast.lockdown}
 \end{figure}
 %
@@ -601,60 +601,44 @@ We assess analytical values obtained from the new 8 weeks forecast:
 	\item regarding the Membach station forecasts, the MAPE is reduced to $14\%$, while 82\% and 96\% of data falls inside the confidence intervals.
 \end{itemize}
 
-Thus, we notice a visible degradation in performance for Uccle station data, and a slight improvement for Membach station's. The slight improvement is most certainly driven by the single peak, with lower values than previous peaks, and by the increased variability for data further from the end of the training set.
+Thus, we notice a visible degradation in performance for Uccle station data, and a slight improvement for Membach station's. The slight improvement is most certainly driven by the single peak with lower values than the multiple previous peaks, and by the increased variability for data further from the end of the training set.
 
 
-%MEMS
-%Test set inside the CI
-%80% CI 	  74.18 %
-%95% CI 	  89.58 %
-%Errors:  forecast with ARIMA(2,0,0)(0,1,1)[168] 
-%MSE= 117.9258   MAE= 7.709243   MAPE= 16.60103   RMSE= 10.85937   R2= 0.4777765 
 
-
-%UCCS
-%Test set inside the CI
-%80% CI 	  57.51 %
-%95% CI 	  78.42 %
-%Errors:  forecast with ARIMA(2,0,0)(0,1,1)[168] 
-%MSE= 670897.8   MAE= 664.5903   MAPE= 33.94793   RMSE= 819.0835   R2= 0.5188538 
-
-
-%Uccle: remodel on 52+18 (until 1st March 2020), forecast 2 months (8 weeks) => diff in MAPE
-%Membach: remodel on 52+18 (until 1st March 2020), forecast 2 months (8 weeks) => diff in MAPE
 
 \section{Conclusions}
-The models we choose for both stations show interesting predictive efficiency, 
+The final models for both stations show interesting predictive efficiency, even if analysing the ACF and PACF plots of their residuals we notice a remaining daily seasonality that is not explained by the models (\figurename~\ref{fig:arima-24}).
 
-TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO 
+The initial assumptions on the seasonalities are confirmed by our study, given the periodgrams (\figurename~\ref{fig:periodgram}) and the efficiency and structure of the models (seasonal terms). Though, the origin of those assumptions (human activity) cannot be solely confirmed by our methodology.
 
-Interestingly, the analysis of ACF and PACF plots for Membach hints to similar models to the untransformed Uccle data:
-$\mathrm{ARIMA}(0,1,0)(0,1,1)_{168}$ and $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$.
+Interestingly, both final models have the same order, $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$: still, they cannot be actually compared, given the Box-Cox transformation applied to the Membach data.
+% Still, a similar interpreation could be done
 
-TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO 
+\paragraph{Lockdown influence} The assessment of the lockdown influence on seismic data show relevant information for further studies.
 
-\subsubsection{Lockdown influence}
+Extracting both daily and weekly seasonalities with the local mean methodology (\figurename~\ref{fig:season.lockdown}), it is not possible to appreciate any statistically significant difference from before and during the lockdown on both datasets.
+
+Checking the seasonal plots of the complete weekly seasonality (\figurename~\ref{fig:season.lockdown:ms:mems}), it is possible to notice a flattening of the values towards 0, in particular regarding Monday to Friday values.
+
+The Uccle station, located near the Belgium capital city, show a relevant difference in forecasts after the lockdown, that are heavily out of the confidence bands, reaching over 45\% of MAPE. This is the opposite for data from Membach station, located in a small town near a natural park, that show no significant difference in forecasts performance.
+
+The forecast results hint to a significant correlation between the location of the seismic station and the influence of the lockdown.
+
 \subsection{Limitations and future works}
-forecast residuals of model with 24h seasonality, and 
+The main problems identified during this analysis are the length and number of the datasets, the multiple seasonalities and the Normality assumption.
 
-seasonalities divergence -> check normality assumption for each hour to validate the gaussian-empirical confidence bands
+Even if after a first decomposition we chose to only consider the weekly seasonality, our models show a remaining daily seasonality. This could be addressed with various approach. One initial test could be to forecast a different model on the residuals with a daily seasonality, so that the composition of the two models could include both seasonalities.
 
-The main problems of this projects that we identified are multiple seasonalities and the Normality assumption.
+A second mean to address the multi-seasonalities is through a harmonic regression approach. Using that we could model multiple seasonalities at once through Fourier terms. One difficulty we could encounter is that our weekly seasonality appear to be flat for most of the week (\figurename~\ref{fig:season.lockdown}), and such a behaviour is not easy to model with a few Fourier terms per seasonality, leading to computationally heavy modelling and forecasting.
 
-% comment by prof on some arima plots
-% If you're trying to compare what happens before and after lock-down, you should probably assess the forecast for the period without lock-down and then compare with how it performs for forecasting lock-down values. A large difference (forecast performing worse during lock-down) would indicate that the model doesn't work during lock-down because something has changed in the behaviour of the data, thus confirming your hypothesis
+Different models, such as STL (Seasonal and Trend decomposition using Loess) or TBATS (Trigonometric seasonality, Box-Cox transformation, ARMA errors, Trend and Seasonal components), are suggested in the literature \cite[chapter 12]{hyndman2018forecasting} to address multiple and complex seasonalities, also when they change in time. These could also better tackle the missing Normality assumption of our data.
 
-The tested models do not effectively include both daily and weekly seasonalities, even if initially we thought so. Also they cannot include the apparent yearly seasonality, mainly because of the short timeseries.
-To overcome this limitation, we could try different models, also ARIMA-based, that can estimate multiple seasonalities. The first that we tested models seasonalites through Fourier terms. The main problem that lead us not to go further with that approach is that our seasonalities cannot be expressed by a combination of few sine and cosine curves. This requires a high number of curves to estimate, that requires an heavy computational power.
+A future study should be done when more data is available, in order to assess the presence of higher order seasonalities, such as a yearly one.
 
-To compensate those difficulties, in the literature it is suggested to test TBATS models, which combines Fourier terms, Box-Cox transformation, and exponential smoothing. This seems a suitable approach given the analyses we performed until now, that can possibly address the non-Normal distribution.
+The confidence bands used to assess any significant change in seasonalities lie on another Normality assumption, that data for each hour of the day/week follow a Normal distribution. This should be assessed in a future study integration.
 
-The final suggestion for future work would be to better analyse the differences between stations, in such a way to better correlate different influences of the lockdown on the areas near each station.
+On a more broad perspective, other analyses should be done on the lockdown impact, and more generally on isolating different factors that influence our datasets. Repeating the study on the other 7 stations will give interesting insights.
 
-
-
-
-\newpage
 \bibliography{project}
 
 \end{document}
