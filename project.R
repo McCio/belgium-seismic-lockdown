@@ -20,7 +20,7 @@ print_dec <- function(x, decimals=2) trimws(format(round(x, decimals), nsmall=de
 # - proj.data.RData
 # - proj.mems.RData (optional)
 # - proj.uccs.RData (optional)
-# setwd("/media/data/Documents/Uni/spatiotemp/villalobos/project/")
+# setwd("/media/data/Documents/Uni/spatiotemp/project/")
 # Load the datasets. proj.data.RData contains seis.uccs and seis.mems data.frame objects
 load('proj.data.RData')
 
@@ -197,10 +197,8 @@ plot(c(rbind(blocks$start, blocks$end, NA)), rep(hour(blocks$interval), each=3),
      xaxt="n", xlim=c(min(seis$utc_second), max(seis$utc_second))
 )
 axis.POSIXct(1, at=seq.POSIXt(from=min(seis$utc_second), to=max(seis$utc_second), by = "1 month"), format="%m-'%y", cex=0.8)
-text(x=blocks$start, y=hour(blocks$interval), labels = paste0(format(blocks$start, "%y-%m-%d %H:%M")), cex=0.9, pos=2)
-text(x=blocks$end, y=hour(blocks$interval), labels = paste0(format(blocks$end, "%y-%m-%d %H:%M")), cex=0.9, pos=4)
-text(x=blocks$start + make_difftime(hour=sapply(hour(blocks$interval), "/", y=2)), y=hour(blocks$interval), labels = paste0(hour(blocks$interval), "H"), cex=0.9, pos=3)
-text(x=blocks$start + make_difftime(hour=sapply(hour(blocks$interval), "/", y=2)), y=hour(blocks$interval), labels = paste0(hour(blocks$interval), "H"), cex=0.9, pos=1)
+text(x=blocks$start, y=hour(blocks$interval) - .2, labels = paste0(format(blocks$start, "%y-%m-%d %H:%M")), cex=0.9, pos=2)
+text(x=blocks$end, y=hour(blocks$interval) - .2, labels = paste0(hour(blocks$interval), "H"), cex=0.9, pos=4)
 # remove from RAM copy of dataset and cleanup
 remove(seis.complete, seis.missing.ids)
 gc()
@@ -241,20 +239,19 @@ build_ts <- function(dset, periods=NULL, start=NULL, end=NULL, force_ms=T) {
 
 # To analytically select the period, we follow these steps, using the periodgram
 # Firstly, we compute the periodgram itself on the MA-smoothed dataset, creating the plot with ggplot so that we can more easily highlight some points
-min_h_seasonality <- 24  # use this to see the values highlighted higher than 168 hours
 min_h_seasonality <- 2
 pgram <- spec.pgram(stats::filter(build_ts(seis.h, start = seis.train.start, end = seis.train.end), side=2, filter=c(0.5, rep(1,min_h_seasonality-1), 0.5)/min_h_seasonality),
                     detrend=F, demean=T, na.action=na.aggregate, plot=F)
 pgram.data <- data.frame(freq=pgram$freq, spec=pgram$spec)
 ggplot(pgram.data) +
-  geom_line(aes(freq, log(spec))) +
-  xlab("frequency") + ylab("log(spectrum)") +
-  labs(title = "Periodgram", caption = paste0("bandwidth = ", pgram$bandwidth, "    df = ", pgram$df)) ->
+  geom_line(aes(freq, spec)) +
+  xlab("frequency") + ylab("power level") +
+  labs(title = paste("Periodgram -", description), caption = paste0("bandwidth = ", pgram$bandwidth, "    df = ", pgram$df)) ->
   periodgram
 # we then select the points with higher values of the spectrum, and transform the frequency into the corresponding hour value
 # 1/freq/3600 comes from the data being second-based (we run spec.pgram on a pure zoo dataset)
-start_ratio <- 2
-filter_freq <- (pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*start_ratio)) 
+start_ratio <- 3
+filter_freq <- (pgram$spec > (mean(pgram$spec) + sd(pgram$spec)*start_ratio)) & 1/pgram$freq/3600 < 24*365
 top95pc <- pgram$spec[filter_freq]
 top95freq <- pgram$freq[filter_freq][order(top95pc, decreasing = T)]
 top95pc <- pgram$spec[filter_freq][order(top95pc, decreasing = T)]
@@ -271,11 +268,13 @@ ratio.color <- function(x) ifelse(x >= (mean(pgram$spec) + sd(pgram$spec)*3), "r
 shown_labels <- 4
 periodgram +
   scale_x_continuous(sec.axis = sec_axis(~1/./3600, breaks=c(1, 3, 2*c(1,2,3,4,6,12), 24*7), labels = as.integer, name="hours")) +
-  scale_y_continuous(sec.axis = sec_axis(~exp(.), breaks=mean(pgram$spec) + sd(pgram$spec) * c(1,3), labels=c("1", "2", "3")[c(1,3)], name="spectrum/sd ratio")) +
-  geom_hline(yintercept=log(mean(pgram$spec) + sd(pgram$spec) * c(1:3)), linetype="dotted", color = ratio.color(mean(pgram$spec) + sd(pgram$spec) * c(1:3))) +
-  geom_point(data=data.frame(freq=top95freq, spec=top95pc), aes(freq, log(spec), color=ratio.color(spec)), shape="o", size=4, show.legend = F) +
-  geom_label_repel(data=data.frame(freq=top95freq, spec=top95pc)[1:shown_labels,], aes(freq, log(spec), label=round(1/freq/3600), color=ratio.color(spec)), segment.color="grey", show.legend=F) +
+  scale_y_continuous(n.breaks=6) +
+  geom_hline(yintercept=(mean(pgram$spec) + sd(pgram$spec) * c(start_ratio:3)), linetype="dotted", color = ratio.color(mean(pgram$spec) + sd(pgram$spec) * c(start_ratio:3))) +
+  geom_point(data=data.frame(freq=top95freq, spec=top95pc), aes(freq, (spec), color=ratio.color(spec)), shape="o", size=4, show.legend = F) +
+  geom_label_repel(data=data.frame(freq=top95freq, spec=top95pc)[1:shown_labels,], aes(freq, (spec), label=round(1/freq/3600), color=ratio.color(spec)), segment.color="grey", show.legend=F) +
   scale_color_manual(values = c("darkgreen", "blue", "red")[start_ratio:3])
+
+remove(pgram, pgram.data, filter_freq, top95pc, top95freq, top95seas.s, top95seas.h, ratio.color, periodgram)
 gc()
 
 

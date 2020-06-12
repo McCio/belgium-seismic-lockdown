@@ -151,18 +151,18 @@ Inspired by an article published during the initial phases of the Belgium-wide l
 
 It is important to notice that some industrial events, such as mine explosions, are already mapped by seismologic institutions since they interfere with seismic surveys \cite{OtherSeismicEvents}. Such events are sometimes comparable with natural seismic events, depending on the distance from the seismograph.
 
-The correct estimation of a background noise, correlated or not with human activity, could help institutions to better isolate less prominent earthquakes and similar events from the seismic data. This could result in better understanding of the frequency of earthquakes and by studying their more-precise evolution over time.
+The correct estimation of a background noise, correlated or not with human activity, could help institutions to better isolate less prominent earthquakes and similar events from the seismic data. This could result in better understanding of the frequency of earthquakes by studying their more precise evolution over time.
 
 \subsubsection{Data source and description}
-The Royal Observatory of Belgium (ROB) gathers and publishes \cite{RoyalDataPolicy,Data20200402} data about vertical ground displacement from 9 stations through the country, linking them to seismic events whenever possible \cite{DataEvents20200402}. They also offer a data visualization tool for the same data \cite{DataVisualization20200402}.
+The Royal Observatory of Belgium (ROB) gathers and publishes \cite{RoyalDataPolicy,Data20200402} data about vertical ground displacement from 9 stations through the Country, linking them to seismic events whenever possible \cite{DataEvents20200402}. They also offer a data visualization tool for the same data \cite{DataVisualization20200402}.
 
 The vertical ground displacement is represented by the minimum and maximum displacements of the ground in the vertical axis registered in a second, with $nm$ as unit of measure. This can easily be transformed to total ground displacement for each second by taking their difference. There are 86400 measurements per day, around 30 million per year.
 
 Out of the 9 stations, the following 6 have interesting positions, related to possible correlations with human activity:
 \begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item \textbf{Uccle}, \textbf{Sart-Tilman}, and \textbf{Ében-Émael} are near a city (Brussels, Liege, and Maastricht).
-	\item \textbf{Ostenda} This station is near the city of Ostenda, that borders with the sea.
-	\item \textbf{Membach} and \textbf{Dourbes} are near a natural park.
+	\item \textbf{Ostenda} is near the city of Ostenda, that borders with the sea.
+	\item \textbf{Membach} and \textbf{Dourbes} are in towns near a natural park.
 \end{itemize}
 
 Data collected from near a city and from near a natural park could be selected, in order to compare possible seasonality results and differences from before and after the lockdown. %Also data from \textbf{Ostenda} station could be interesting, given the possible sea influence.
@@ -175,7 +175,7 @@ It is important to notice that the daily data in each file refers to the UTC tim
 The data is provided in CSV format, one file per day, with only two columns related to the min-max pair \cite{Data20200402} and no column related to time. This causes two problems:
 \begin{enumerate}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item For merging days, we need to add a column with the second-precise datetime
-	\item In days with missing values there are placeholder values instead a missing row, that would make the following rows misinterpreted for measurements on the wrong second. The placeholder values are one of these two min-max pairs: $(0,0),\, (-1,1)$.
+	\item In days with missing values there are placeholder values instead of a missing row, that would make the following rows misinterpreted for measurements at the wrong second. The placeholder values are one of these two min-max pairs: $(0,0),\, (-1,1)$.
 \end{enumerate}
 
 Data from each station have different domains, as distinct equipment can register a specific amplitude of the seismic movements. In fact, we found some values\footnote{Values out of domain for each station are less than 10 out of $\approx50$ million.} outside the domains, and we consider them as missing values.
@@ -195,11 +195,11 @@ In particular, we find that out of $\approx50$ million seconds, from 27-10-2018 
 % 49929756 present values, 184421 missing points ( 99.63 % / 0.37 % )
 
 \subsubsection{Data aggregation and initial transformation}
-Since we are not interested in a second-precise analysis, and it would be computationally expensive to deal with the whole dataset, we aggregate data by hour. The aggregation results in around 14 thousand points, that can still be captured by interpretable models.
+Since we are not interested in a second-precise analysis, and it would be computationally expensive to deal with the whole dataset, we aggregate the data by hour. The aggregation results in around 14 thousand points, that can still be captured by interpretable models.
 
-While performing this operation, we should consider the correct time-zone: any seasonal analysis dealing with UTC dates would be out of phase for the half-year of legal time, with respect to the half-year of solar time. With the help of the \texttt{lubridate} R package we converted times to local time-zones, and then we kept them as absolute values, because all the R functions we use work on the UTC conversion of datetimes by default. This transformation made it possible to have each hour in the timeseries to represent the local time in Belgium (\textit{Europe/Brussels}), without being influenced by the legal time.
+While performing this operation, we should consider the correct time-zone: as we anticipated, any seasonal analysis dealing with UTC dates would be out of phase for the half-year of legal time, with respect to the half-year of solar time. Employing the \texttt{lubridate} R package we converted times to local time-zones, and then we kept them as absolute instants, because all the R functions we use work on the UTC conversion of datetimes by default. This transformation made it possible to have each hour in the timeseries to represent the local time in Belgium (\textit{Europe/Brussels}), without being influenced by the legal time.
 
-The aggregation was performed considering the mean total ground displacement, for the following reasons:
+The aggregation was performed considering the mean total ground displacement at each hour, for the following reasons:
 \begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item When an hour contains some missing seconds, these do not heavily affect the aggregation result, in contrast with summing the values
 	\item Seismic events, such as quakes and mine explosions, normally last some minutes at most, and will affect the result only slightly, as opposed to the hourly maximum
@@ -244,7 +244,10 @@ To deal with them when R methods need complete timeseries, we define different c
 \subsubsection{Seasonality assumptions}
 The already cited article \cite{NatureCoronavirusSeismic} suggests the existence of a weekly seasonality. Looking at the data it seems confirmed, in addition to a daily seasonality (\figurename~\ref{fig:zoom}).
 
-Since our main focus is on the seasonalities themselves, we aim to prevent assumptions based on this objective. In other words, we want to avoid searching for correlation with human activity while imposing human-based seasonality periods. Thus, we use an analytical method to extract seasonalities that the data itself suggests to us. Still, we recognize that the already performed transformations impose an human-based time alteration to the data itself (Section \ref{sec:cleanup-transform}).
+Since one of the main focuses is on the seasonalities themselves, we aim to avoid searching for correlation with human activity while imposing human-based seasonality periods. Thus, we use an analytical method to extract seasonalities that the data itself suggests to us. Still, we recognize that the already performed transformations impose an human-based time alteration to the data itself (Section \ref{sec:cleanup-transform}).
+
+The method we are going to apply is based on the Fourier Transform (FT), and generates a \textit{periodgram} highlighting the frequencies that might correspond to a seasonality component \cite[chapter 11]{brockwell1991time}.
+Applying the FT for any frequency, we transform our 1-dimensional data into 2-dimensional data mapped around a circle. Then, we can sum all the resulting vectors (that are our new data points) to obtain a vector for each frequency, whose absolute value represents the power level of the same frequency. An high power level represents a significant periodicity on that frequency in our original data, since it means that the corresponding 2-dimensional data behaves in a highly similar way during each cycle.
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
@@ -261,12 +264,9 @@ Since our main focus is on the seasonalities themselves, we aim to prevent assum
 	\label{fig:zoom}
 \end{figure}
 %
-The method we are going to apply is based on the Fourier Transform (FT), and generates a \textit{periodgram} highlighting the frequencies that might correspond to a seasonality component \cite[chapter 11]{brockwell1991time}.
-Applying the FT for any frequency, we transform our 1-dimensional data into a 2-dimensional data mapped around a circle. Then, we can sum all the resulting vectors (that are our new data points) to obtain a vector for each frequency, whose absolute value represents the power level of the same frequency. An high power level represents a significant periodicity on that frequency in our original data.
-
 A common operation to increase the difference between significant and non-significant periodicities is to apply a Moving Average (MA) smoothing filter with a smaller window than the interesting ones. We will use such a filter with $p=2$.
 
-On this note we must specify that, when a significant periodicity is found, it influences smaller periodicities given by $f*\{2,3,\dots\}$ the significant frequency \cite{brockwell1991time}. Also, if any periodicity is found that is longer than the original dataset, it must be considered as simple chance, rather than serendipity.
+On this note we must specify that, when a significant periodicity is found, it influences smaller periodicities given by $f*\{2,3,\dots\}$ the significant frequency \cite[chapter 11]{brockwell1991time}. Also, if any periodicity is found that is longer than the original dataset, it must be considered as simple chance, rather than serendipity.
 
 Since we apply this method on a dataset indexed by seconds, the transformation of the frequency $f$ into hourly periodicity $p$ is obtained by $p=(1/f)/3600$.
 We can analyse the resulting periodgrams for Uccle and Membach stations in \figurename{s} \ref{fig:periodgram:uccs} and \ref{fig:periodgram:mems}.
@@ -283,27 +283,27 @@ An higher power value for a frequency means that the corresponding periodicity i
 		\caption{Membach station}
 		\label{fig:periodgram:mems}
 	\end{subfigure}
-	\caption{Periodgram results}
+	\caption{Periodgram plots}
 	\label{fig:periodgram}
 \end{figure}
 %
-Both highlight multiple 24-hour periodicities. This is given by approximation factors, since we round the divisions result to the nearest natural number. It also highlights that using a single 24-hour seasonality could leave some information on the remaining components. Still, in both stations it is the most significant periodicity.
+Both plots highlight multiple 24-hour periodicities. This is given by approximation factors, since we round the divisions result to the nearest natural number. It also highlights that using a single 24-hour seasonality could leave some information on the residuals. Still, in both stations it is the most significant periodicity.
 
 Both stations highlight a significant 168-hour (1-week) periodicity, that also confirms our initial assumptions.
 
 Both stations show a possibly significant 12-hour seasonality, but since it corresponds to double the frequency of the 24-hour seasonality, we can safely ignore it.
 
 \subsubsection{Dataset division}
-As best practices suggest, we are going to divide the dataset into training and testing datasets with a ratio around $85\%/15\% - 75\%/25\%$.
-Since one of our objectives is to assess any significant difference from before and after the Belgium lockdown (on March $14^{th}$ the \textit{soft} lockdown, while on March $18^{th}$ the complete lockdown), we selected data from the start of our timeseries until 20-01-2020 (64 weeks $\approx 82\%$) as training, while the test follows and ends on 27-04-2020 (14 weeks $\approx 18\%$).
+As best practices suggest, we divide the dataset into training and testing datasets with a ratio around $85\%/15\% - 75\%/25\%$.
+Since one of our objectives is to assess any significant difference from before and after the Belgium lockdown (on March $14^{th}$ the \textit{soft} lockdown, while on March $18^{th}$ the complete lockdown), we selected data from the start of our timeseries until 20-01-2020 (64 weeks $\approx 82\%$) as training, while the test follows ending on 27-04-2020 (14 weeks $\approx 18\%$).
 
 Having the test set span from before to after the lockdown enables us to assess significant changes in the forecast performance on the two different periods.
 
 This initial division demostrated to be computationally heavy while fitting some models with weekly seasonality, so that it would be challenging to fit more than a couple of models.
 Given this issue, we choose the training/testing sets to hold 52/18 weeks: this is the greater train-to-test ratio we deem usable ($\approx 75\%/25\%$), while maintaining computational feasibility.
-The assessment of the lockdown influence will be discussed in Section~\ref{sec:methodology}.
+The assessment of the lockdown influence will be discussed in Section~\ref{sec:methodology:lockdown}.
 
-Some R commands cannot handle timeseries with missing values, but as we have seen both stations datasets include missing values.
+Some R functions cannot handle timeseries with missing values, but as we have seen both stations' datasets include missing values.
 Also, please note that we are going to have a timeseries object indexed by weeks, so that it contains the 168 hours between each integer index.
 Since we know that the longest missing values series is 90 hours long, we can apply a simple completion strategy for serving those commands a filled timeseries: we will substitute missing values with the mean of the week they are in; in R, \texttt{na.aggregate(x, floor)}.
 
@@ -315,7 +315,7 @@ In order to decompose our dataset into trend and seasonality(-ties) components, 
 	\item Remove the trend from the dataset and extract the seasonal figure using the local mean method
 	\item Remove the trend and the seasonal components to obtain the residuals
 \end{enumerate}
-While doing so, we tested different smoothing filters: simple filter (p=seasonality), Spencer's 15-point filter and MA smoothing filter (f=seasonality). Since they do not produce particularly different seasonalities, we choose to keep the results obtained by applying the MA smoothing filter, for its significance in terms of seasonally adjusted data.
+While doing so, we tested different smoothing filters: simple filter (p=seasonality), Spencer's 15-point filter and MA smoothing filter (p=seasonality). Since they do not produce particularly different seasonalities, we choose to keep the results obtained by applying the MA smoothing filter, for its significance in terms of seasonally adjusted data.
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
@@ -328,16 +328,16 @@ While doing so, we tested different smoothing filters: simple filter (p=seasonal
 		\caption{Membach station}
 		\label{fig:decomposed:mems}
 	\end{subfigure}
-	\caption{Timeseries decomposition}{\centering\small Only the second method results are shown for clarity. Week 10 includes January $1^{st}$.\\}
+	\caption{Timeseries decomposition}{\centering\small Only the second method results are shown for clarity. Week 10 includes January $1^{st}$.\\\centering x-axes on left columns represent weeks, on right columns represent hours.\\}
 	\label{fig:decomposed}
 \end{figure}
 %
-Since the periodgrams suggested the presence of two significative periodicities, we also tested the extraction of both corresponding seasonalities:
+Since the periodgrams suggested the presence of two significative periodicities, we also tested the extraction of both corresponding seasonalities (\figurename~\ref{fig:decomposed}):
 \begin{enumerate}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
-	\item Apply the MA smoothing filter (f=24) on the dataset to extract the trend component
+	\item Apply the MA smoothing filter (p=24) on the dataset to extract the trend component
 	\item Remove the trend from the dataset and extract the 24-hour seasonal figure using the local mean method
 	\item Remove the 24-hour seasonal components to obtain a deseasoned dataset
-	\item Apply the MA smoothing filter (f=168) on the deseasoned dataset to extract the updated trend component
+	\item Apply the MA smoothing filter (p=168) on the deseasoned dataset to extract the updated trend component
 	\item Remove the trend from the already deseasoned dataset and extract the 168-hour seasonal figure using the local mean method
 	\item Repeat steps 1-5 using the last deseasoned dataset until convergence (2-3 cycles)
 	\item Removing the last fitted trend and the two seasonalities we obtain the final residuals
@@ -367,15 +367,15 @@ Given in particular the second property, we will only use the 168-hours seasonal
 
 In \figurename~\ref{fig:decomposed} we see the double decomposition results. While data from Uccle station have a clear significativity of both trend and seasonalities, data from Membach could seem not significant. Still, if we notice that the main timeseries lies between values of 0 and 100, we can find out that around half of the value will be composed by the trend, a 30\% by the joined seasonality components, and the remaining value by the residuals. We will need to apply some transformation to flatten the spikes that start from the middle of that dataset.
 
-From tha same decomposition results, we notice that data around January $1^{st}$ show a significant drop in values. That is highlighted by both trends, where the overall minimum falls in that period, and by the residuals for Uccle data, showing a clear overestimation.
+From the same decomposition results, we notice that data around January $1^{st}$ show a significant drop in values. That is highlighted by both trends, where the overall minimum falls in that period, and by the residuals for Uccle data, showing a clear overestimation.
 
 \section{Methodology}\label{sec:methodology}
-Having two different datasets, we will operate on them separately and then we will compare the model interpretation.
+Having two different datasets, we will operate on them separately and then we will compare the model interpretations.
 
 For each station, we fit a model that generalises our training dataset in such a way that forecasting until March $1^{st}$ becomes effective, also assessing errors analytically.
 Obtaining such a reliable model will be the first step to verify any significant difference forecasting over the lockdown period.
 
-The model we fit is the ARIMA model, including the seasonality components. To identify the order of the different components described by ARIMA, we will analyse the autocorrelation and partial autocorrelation of our datasets.
+The model we fit is the ARIMA\footnote{AutoRegressive Integrated Moving Average} model, including the seasonality components. To identify the order of the different components described by ARIMA, we will analyse the autocorrelation (ACF) and partial autocorrelation (PACF) functions of our datasets.
 As a reminder:
 \begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
 	\item non-seasonal AR process of order $p$ is described by an exponentially or sigmoidally decaying ACF, and by a cut-off of significant PACF values at lag $p$
@@ -385,7 +385,7 @@ As a reminder:
 	\item given how significance is assessed for the ACF/PACF spikes, one over 20 spikes (5\%) could be \textit{coincidentally significant} or \textit{coincidentally \textbf{non}-significant}
 \end{itemize}
 
-The same model will be then used to forecast other 8 weeks from March $2^{nd}$, so that we can assess the forecast power over the lockdown period. Given the fact that both our series are quite stable over time (\figurename{s} \ref{fig:decomposed:uccs}, \ref{fig:mems:box-cox:data}), we can expect that the predicted variability for further forecasts will not significantly increase.
+The same model will be then used to forecast other 8 weeks from March $2^{nd}$, so that we can assess the forecast power over the lockdown period. Given the fact that both our series are quite stable over time (\figurename{s} \ref{fig:decomposed:uccs}, \ref{fig:mems:box-cox:data}), we can expect that the predicted variability for further forecasts will not significantly increase, compromising the long-term forecasts.
 
 Also, we will decompose the seasonalities from data before and after the lockdown, in order to assess any significant change regarding that aspect.
 
@@ -431,13 +431,13 @@ Also checking the Mean Absolute Percentage Error (MAPE) on the training set, the
 	\label{fig:arima}
 \end{figure}
 %
-The ACF and PACF of the residuals for all three models are very similar (\figurename~\ref{fig:arima-26}), even if the models themselves have great differences in meaning and in number of parameters: they highlight a clear seasonal ARMA process with periodicity 24. This shows how our previous conclusion that the 168 hours seasonality could include the 24 hours one is flawed. Unfortunately, the R function we are using does not permit to estimate multiple seasonalities\footnote{\textit{Arima} method from the \textit{forecast} R package, only specifying the seasonal and non-seasonal orders.}.
+The ACF and PACF of the residuals for all three models are very similar (\figurename~\ref{fig:arima-26}), even if the models themselves have great differences in meaning and in number of parameters: they highlight a clear seasonal ARMA process with periodicity 24. This shows how our previous conclusion that the 168 hours seasonality could include the 24 hours one is flawed. Unfortunately, how we are using the R function do not permit us to estimate multiple seasonalities\footnote{\textit{Arima} method from the \textit{forecast} R package, only specifying the seasonal and non-seasonal orders.}.
 
 Probably related to the 24 hours periodicity that remains on the residuals, together with the non-Normality of the original data, all Q-Q plots show clear divergence on both sides of the distribution (\figurename~\ref{fig:arima-24}). The Box-Pierce test statistics accept the independence hypothesis between residuals.
 
 Then, we assess how the forecasts behave on the test set. The MAPE for all three models more than doubles to around 17\% for $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$ and around 15\% for the other two. This is expected, since normally the model is more fitted to the training data than to unknown future data.
 
-Also, it must be noted that a January $1^{st}$ period lies in our test dataset, that is already noticed as low-valued period (\figurename~\ref{fig:decomposed}). We can notice a clear overestimation during those couple of weeks (around week 62 on \figurename~\ref{fig:arima-forecast}).
+Also, it must be noted that a January $1^{st}$ period lies in our test dataset, that was already noticed as low-valued period (\figurename~\ref{fig:decomposed}). We can notice a clear overestimation during those couple of weeks (around week 62 on \figurename~\ref{fig:arima-forecast}).
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
@@ -450,7 +450,7 @@ Also, it must be noted that a January $1^{st}$ period lies in our test dataset, 
 		\caption{$\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$}
 		\label{fig:arima-forecast:412011}
 	\end{subfigure}
-	\caption{ARIMA forecasts}{\footnotesize$\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$ behaves like $\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$ with faster increasing variablity}
+	\caption{ARIMA forecasts}{\centering\footnotesize$\mathrm{ARIMA}(4,1,2)(0,1,1)_{168}$ behaves like $\mathrm{ARIMA}(3,1,1)(0,1,1)_{168}$ with faster increasing variablity\\}
 	\label{fig:arima-forecast}
 \end{figure}
 %
@@ -472,7 +472,7 @@ Given all these factors, we are confident choosing the $\mathrm{ARIMA}(2,0,0)(0,
 
 \subsection{Membach station}
 \subsubsection{ARIMA}
-Similarly to data from Uccle, data from Membach doesn't respect the Normality assumption. We tested if the Q-Q plot showed significantly better approximation of the Normal distribution after applying the \textit{log} or \textit{Box-Cox} transformations, and the latter makes the data approach Normality with $\lambda\approx-1$ (\figurename~\ref{fig:mems:box-cox}). This solves the high peaks problem we already noticed while decomposing to highlight the trend and seasonalities.
+Similarly to data from Uccle, data from Membach does not respect the Normality assumption. We tested if the Q-Q plot showed significantly better approximation of the Normal distribution after applying the \textit{log} or \textit{Box-Cox} transformations, and the latter makes the data approach Normality with $\lambda\approx-1$ (\figurename~\ref{fig:mems:box-cox}). This solves the high peaks problem we already noticed while decomposing to highlight the trend and seasonalities.
 
 Since the $\lambda$ value approximately simplifies the Box-Cox transformation formula from $(y^\lambda-1)/\lambda$ into $(y-1)/y$, and since we only have positive values, all transformed values fall into the higher $0-1$ spectrum, in particular $0.95-1$ (\figurename~\ref{fig:mems:box-cox:data}). This will probably cause some approximation errors that could rig the final results.
 
@@ -493,7 +493,7 @@ Since the $\lambda$ value approximately simplifies the Box-Cox transformation fo
 %
 The transformed data still shows no constant mean nor variance, even if they show less variability around the peaks with respect to the original data, confirmed by the Q-Q plot (\figurename~\ref{fig:mems:box-cox:qq}). Thus, we consider the usage of the \textit{diff} operator, at lag 1 and 168. The analysis of ACF and PACF plots hints to two models: $\mathrm{ARIMA}(0,1,0)(0,1,1)_{168}$ and $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$. All ACF and PACF plots for Membach model estimation are not shown for brevity.
 
-In this case, the employment of \textit{auto.arima} stepwise methodology$^{\ref{footnote:auto.arima}}$ highlights the first model improved with one non-seasonal MA parameter more. This is confirmed by the ACF/PACF plots of its residuals. Their analysis for the second model do not lead to any improvement.
+The employment of \textit{auto.arima} stepwise methodology$^{\ref{footnote:auto.arima}}$ highlights the first model improved with one more non-seasonal MA parameter. This is confirmed by the ACF/PACF plots of its residuals, while their analysis for the second model do not lead to any improvement.
 The ACF and PACF plots of both models are similar to the ones from the chosen model for the Uccle station (\figurename~\ref{fig:arima-24}), and we can notice the same 24 hours remaining periodicity.
 
 The Box-Pierce test statistics for both models accept the independence hypothesis between residuals. The two models have similar AIC values, and similar MAPE on the training set ($\approx6\%$). Thus, we can assess the forecasts for both models in \figurename~\ref{fig:mems:arima}.
@@ -522,7 +522,7 @@ Analytically, we have quite a difference between the two models in terms of adhe
 	\item $\mathrm{ARIMA}(0,1,1)(0,1,1)_{168}$: $\approx98\%$ of data is in the $80\%$ CI and $\approx99\%$ in the $95\%$ CI
 	\item $\mathrm{ARIMA}(2,0,0)(0,1,1)_{168}$: $\approx73\%$ of data is in the $80\%$ CI and $\approx89\%$ in the $95\%$ CI
 \end{itemize}
-As we see, the first model over-generalises the variability, while the latter seems more precise, even if losing some information. Also considering the MAPE on the test set, the latter model fits the data better with a $16\%$ error, instead of the $18\%$ for the first model.
+As we see, the first model over-generalises the variability, while the latter seems more precise, even if losing some information. Considering the MAPE on the test set, the latter model fits the data better with a $16\%$ error, instead of the $18\%$ for the first model.
 %
 %Parameters roots for both models have values within the unit circle.
 
@@ -533,7 +533,7 @@ Since checking the ACF and PACF plots for the original data could lead to a mode
 It is important to highlight that no model we assessed found any pattern for predicting the high-valued spikes.
 %\subsubsection{MSTL}
 
-\subsection{Lockdown influence}
+\subsection{Lockdown influence}\label{sec:methodology:lockdown}
 Even if the two models have the same order, they cannot be directly compared using the Information Criteria, for the Membach model works after a transformation pass, and they are fitted from different data.
 
 Still, we can assess how the lockdown period is forecasted for both stations, and then compare their efficency. Also, we can extract the seasonalities, using the same MA filters we already used, separately from the periods before and during the lockdown, and compare also these results.
@@ -578,7 +578,7 @@ The differences in shape are more highlighted checking the seasonal plots \cite{
 \subsubsection{Forecast divergence}
 Since both our models forecast stable values with almost stable variance (\figurename{s}~\ref{fig:arima-forecast:200011}, \ref{fig:mems:arima:200011}), we can forecast another 8 weeks ahead, until April $26^{th}$, and then compare the efficency of the results with the original test set. These 8 weeks comprise 6 weeks after March $14^{th}$, first day of lockdown in Belgium.
 
-As we can see in \figurename~\ref{fig:forecast.lockdown}, at both stations the models overestimate starting after the lockdown. Uccle data in particular show a greater overestimation, that can also be noticed by looking at the difference between the forecasted and measured values.
+As we can see in \figurename~\ref{fig:forecast.lockdown}, at both stations the models overestimate starting after the lockdown. Uccle data in particular show a greater overestimation.
 
 \begin{figure}[h]
 	\begin{subfigure}{.5\linewidth}
@@ -597,7 +597,7 @@ As we can see in \figurename~\ref{fig:forecast.lockdown}, at both stations the m
 %
 We assess analytical values obtained from the new 8 weeks forecast:
 \begin{itemize}[topsep=0.5em,itemsep=0em,partopsep=0.5em]
-	\item the MAPE for Uccle triples with respect to the original test set to $\approx46\%$, and only 39\% and 63\% of the test data falls inside the confidence intevals (80\% and 95\%).
+	\item the MAPE for Uccle triples with respect to the original test set to $\approx46\%$, and only 39\% and 63\% of the lockdown data falls inside the confidence intevals (80\% and 95\%).
 	\item regarding the Membach station forecasts, the MAPE is reduced to $14\%$, while 82\% and 96\% of data falls inside the confidence intervals.
 \end{itemize}
 
@@ -618,7 +618,7 @@ Interestingly, both final models have the same order, $\mathrm{ARIMA}(2,0,0)(0,1
 
 Extracting both daily and weekly seasonalities with the local mean methodology (\figurename~\ref{fig:season.lockdown}), it is not possible to appreciate any statistically significant difference from before and during the lockdown on both datasets.
 
-Checking the seasonal plots of the complete weekly seasonality (\figurename~\ref{fig:season.lockdown:ms:mems}), it is possible to notice a flattening of the values towards 0, in particular regarding Monday to Friday values.
+Checking the seasonal plots of the complete weekly seasonality (\figurename~\ref{fig:season.lockdown:ms:mems}), it is possible to notice a flattening of the values towards 0, in particular regarding Monday to Friday values. This seem to confirm the initial hypotesis of lockdown influence.
 
 The Uccle station, located near the Belgium capital city, show a relevant difference in forecasts after the lockdown, that are heavily out of the confidence bands, reaching over 45\% of MAPE. This is the opposite for data from Membach station, located in a small town near a natural park, that show no significant difference in forecasts performance.
 
@@ -629,15 +629,15 @@ The main problems identified during this analysis are the length and number of t
 
 Even if after a first decomposition we chose to only consider the weekly seasonality, our models show a remaining daily seasonality. This could be addressed with various approach. One initial test could be to forecast a different model on the residuals with a daily seasonality, so that the composition of the two models could include both seasonalities.
 
-A second mean to address the multi-seasonalities is through a harmonic regression approach. Using that we could model multiple seasonalities at once through Fourier terms. One difficulty we could encounter is that our weekly seasonality appear to be flat for most of the week (\figurename~\ref{fig:season.lockdown}), and such a behaviour is not easy to model with a few Fourier terms per seasonality, leading to computationally heavy modelling and forecasting.
+A second mean to address the multi-seasonalities is through a harmonic regression approach. Using that, we could model multiple seasonalities at once through Fourier terms. One difficulty we could encounter is that our weekly seasonality appear to be flat for most of the week (\figurename~\ref{fig:season.lockdown}), and such a behaviour is not easy to model with a few Fourier terms per seasonality, leading to computationally heavy modelling and forecasting.
 
-Different models, such as STL (Seasonal and Trend decomposition using Loess) or TBATS (Trigonometric seasonality, Box-Cox transformation, ARMA errors, Trend and Seasonal components), are suggested in the literature \cite[chapter 12]{hyndman2018forecasting} to address multiple and complex seasonalities, also when they change in time. These could also better tackle the missing Normality assumption of our data.
+Different models, such as STL (Seasonal and Trend decomposition using Loess) or TBATS (Trigonometric seasonality, Box-Cox transformation, ARMA errors, Trend and Seasonal components), are suggested in the literature \cite[chapter 12]{hyndman2018forecasting} to address multiple and complex seasonalities, also when they change in time. These could better tackle the missing Normality assumption of our data, along with relaxing the initial transformation between timezones.
 
 A future study should be done when more data is available, in order to assess the presence of higher order seasonalities, such as a yearly one.
 
 The confidence bands used to assess any significant change in seasonalities lie on another Normality assumption, that data for each hour of the day/week follow a Normal distribution. This should be assessed in a future study integration.
 
-On a more broad perspective, other analyses should be done on the lockdown impact, and more generally on isolating different factors that influence our datasets. Repeating the study on the other 7 stations will give interesting insights.
+On a more broad perspective, other analyses should be done on the lockdown impact, and more generally on isolating different factors that influence our datasets. Repeating the study on the other 7 stations will surely give interesting insights.
 
 \bibliography{project}
 
