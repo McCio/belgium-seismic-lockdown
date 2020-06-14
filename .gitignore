@@ -4,6 +4,9 @@
 *.aux
 *.synctex.gz
 *.toc
+*.nav
+*.out
+*.snm
 .cache/
 .idea/
 venv/
