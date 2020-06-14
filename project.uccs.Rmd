@@ -18,7 +18,7 @@ output:
 
 ```{r set uccs, include=FALSE}
 # UCCS
-domain <- c(-350000,350000); pattern <- "UCCS-.+\\.csv"; name <- "UCCS"; description <- "Uccle, Bruxelles"; proj_file <- 'proj.uccs.RData'
+domain <- c(-350000,350000); pattern <- "UCCS-.+\\.csv"; name <- "UCCS"; description <- "Uccle, Brussels"; proj_file <- 'proj.uccs.RData'
 ```
 
 ```{r project, child='project.Rmd'}

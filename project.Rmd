@@ -269,7 +269,7 @@ hours.from.start <- as.numeric(week.starts-seis.h.start)*24+168
 autoplot(seis.h.ts, type="l") +
   scale_x_continuous(breaks=hours.from.start/168, labels=format(week.starts, "%d-%m-%y"), limits = c(11,15)-3/24) +
   scale_y_continuous(limits = c(min(seis.h.ts[(10*168):(16*168)]), max(seis.h.ts[(10*168):(16*168)]))) +
-  ylab(data.lab) + xlab(NULL) + labs(title = "Training set", subtitle = "4-weeks zoom", caption = "Data in original scale")
+  ylab(data.lab) + xlab(NULL) + labs(title = paste("4-weeks zoom -", description), caption = "Data in original scale")
 dec.addi <- decompose(seasonality.aggregate(seis.h.ts))
 autoplot(dec.addi) + labs(title="Decomposition of additive time series", subtitle = paste0("Seasonality ", seasonality.period)) + xlab("Weeks")
 ```
@@ -354,8 +354,8 @@ legend("topleft", legend=weekdays(seis.train.start + (as.difftime(c(0:6), units=
 remove(seis.h.24)
 
 plot_grid(
-  autoplot(seis.h.train, main = "Hourly seismic movement", xlab = seasonality.xlab, ylab = "mean movement (nm)"),
-  gghistogram(seis.h.train, add.normal = T) + xlab("mean movement (nm)"),
+  autoplot(seis.h.train, main = "Hourly seismic movement", xlab = seasonality.xlab, ylab = data.lab),
+  gghistogram(seis.h.train, add.normal = T) + xlab(data.lab),
   nrow = 2)
 plot_grid(
   autoplot(acf(seis.h.train, na.action=na.pass, plot=F, lag.max=seasonality.period)) + scale_x_continuous(),
@@ -473,6 +473,11 @@ plots <- show_overlap_and_diff(
   diff.ylab.sec.accuracy = .01
 )
 plot_grid(plots[[1]], plots[[2]], nrow = 2)
+autoplot(seis.h.train) +
+  labs(title=paste("MA filtered trend -", description)) +
+  scale_x_continuous(n.breaks=6, labels=function(x) format(seis.h.start + weeks(x-1), "%d-%m-'%y")) +
+  geom_line(aes(y=trend.s, col="red"), show.legend=F) +
+  ylab(data.lab)
 
 
 ```
