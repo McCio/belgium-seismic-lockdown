@@ -211,10 +211,10 @@
 	$\Downarrow$\\ %hints
 	Daily and weekly seasonalities\\~
 	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/whole data plot-2"}
 		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/whole data plot-2"}
 		\end{subfigure}
 		\caption{Zoom from January $6^{th}$ to February $3^{rd}$ 2019}
@@ -226,10 +226,10 @@
 	$\Downarrow$\\ %reveals
 	Daily and weekly seasonalities\\~
 	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/periodgram-1"}
 		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/periodgram-1"}
 		\end{subfigure}
 	\end{figure}
@@ -239,7 +239,7 @@
 \begin{frame}{\subsecname~- Trend extraction}\centering
 	Tested simple, Spencer's and Moving Average filters
 	\begin{figure}
-		\includegraphics[width=.55\linewidth]{"project.uccs_files/figure-latex/trend MA-2"}
+		\includegraphics[width=.6\linewidth]{"project.uccs_files/figure-latex/trend MA-2"}
 	\end{figure}
 	\large$\Downarrow$\\\normalsize\textbf{Moving Average}\\\small better seasonal features
 \end{frame}
@@ -248,11 +248,11 @@
 	\centering MA filter for detrending\\+\\local mean method%\\
 %	single \& multiple seasonalities extraction
 	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/extract both 24 and 168-2"}
 			\caption{Uccle, Brussels}
 		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/extract both 24 and 168-2"}
 			\caption{Membach}
 		\end{subfigure}
@@ -260,39 +260,6 @@
 	\large$\Downarrow$\\
 	\normalsize\textbf{Only weekly seasonality}\\\small fitting models
 \end{frame}
-
-\subsection{Lockdown impact}
-\begin{frame}{\subsecname~- Multiple seasonalities}\centering
-	Seasonalities extracted together
-	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
-			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/seasonalities/before-after-compare-1"}
-			\caption{Uccle, Brussels}
-		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
-			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/seasonalities/before-after-compare-1"}
-			\caption{Membach}
-		\end{subfigure}
-	\end{figure}
-	\large$\Downarrow$\\
-	\normalsize No significant difference
-\end{frame}
-
-\begin{frame}{\subsecname~- Weekly seasonality}\centering
-	Only weekly seasonality extracted
-	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
-			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/seasonalities/seasonplot-mean-sd-1"}
-		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
-			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/seasonalities/seasonplot-mean-sd-2"}
-		\end{subfigure}
-	\end{figure}
-	\large$\Downarrow$\\
-	\vspace{.3em}\normalsize Monday to Friday lower values\\
-	\vspace{.3em}Overall flattening towards 0
-\end{frame}
-	
 
 %------------------------------------------------
 \section{Parameters estimation}
@@ -348,10 +315,10 @@
 
 \begin{frame}{\subsecname~- Models validation}
 	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/arima-37"}
 		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/arima-69"}
 		\end{subfigure}
 	\end{figure}
@@ -380,10 +347,10 @@
 	Transform using Box-Cox with $\lambda\approx-1$\\ %\quad\Rightarrow\quad y'=(y-1)/y$\\
 	\vspace{.5em}\small Safe since all our data is positive\\\vspace{1em}\large$\Downarrow$\vspace{.5em}\\
 	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/training data transformation plots-7"}
 		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/training data transformation plots-9"}
 		\end{subfigure}
 	\end{figure}
@@ -391,10 +358,10 @@
 
 \begin{frame}{\subsecname~- Models validation}
 	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/arima-21"}
 		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
+		\begin{subfigure}{.49\linewidth}
 			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/arima-13"}
 		\end{subfigure}
 	\end{figure}
@@ -416,28 +383,110 @@
 	\end{columns}
 \end{frame}
 
-\subsection{Lockdown impact}
+%------------------------------------------------
+\section{Lockdown impact}
+%------------------------------------------------
 
-\begin{frame}{\subsecname~- Forecasts assessment}
+\subsection{Seasonalities}
+
+\begin{frame}{Multiple seasonalities}\centering
+	Seasonalities extracted together
 	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
-			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/final-model-5"}
+		\begin{subfigure}{.49\linewidth}
+			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/seasonalities/before-after-compare-1"}
+			\caption{Uccle, Brussels}
 		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
-			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/final-model-5"}
+		\begin{subfigure}{.49\linewidth}
+			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/seasonalities/before-after-compare-1"}
+			\caption{Membach}
 		\end{subfigure}
 	\end{figure}
-	\begin{figure}
-		\begin{subfigure}{.45\linewidth}
-			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/final-model-9"}
-		\end{subfigure}
-		\begin{subfigure}{.45\linewidth}
-			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/final-model-9"}
-		\end{subfigure}
-	\end{figure}
+	\large$\Downarrow$\\
+	\normalsize No significant difference
 \end{frame}
 
-\begin{frame}{\subsecname~- Models performance}
+\begin{frame}{Weekly seasonality}\centering
+	Only weekly seasonality extracted
+	\begin{figure}
+		\begin{subfigure}{.49\linewidth}
+			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/seasonalities/seasonplot-mean-sd-1"}
+		\end{subfigure}
+		\begin{subfigure}{.49\linewidth}
+			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/seasonalities/seasonplot-mean-sd-2"}
+		\end{subfigure}
+	\end{figure}
+	\large$\Downarrow$\\
+	\vspace{.3em}\normalsize Monday to Friday lower values\\
+	\vspace{.3em}Overall flattening towards 0
+\end{frame}
+
+\subsection{Forecasts}
+
+\begin{frame}{Forecasts assessment}
+	\begin{columns}[c]
+		\column{.5\linewidth}
+		\begin{figure}
+			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/final-model-5"}
+		\end{figure}
+		\begin{figure}
+			\includegraphics[width=\linewidth]{"project.uccs_files/figure-latex/final-model-10"}
+		\end{figure}
+		\column{.5\linewidth}\centering
+		\textbf{Uccle, Brussels}\\
+		lockdown $\rightarrow$ during lockdown\\~\\
+		\begin{columns}[T]
+			\column{.2\linewidth}
+			\column{.33\linewidth}\raggedleft
+			\textbf{MAPE}\\\textbf{80\% CI}\\\textbf{95\% CI}\\
+			\column{.2\linewidth}\raggedleft
+			${16\%} \rightarrow$\\
+			${73\%} \rightarrow$\\
+			${89\%} \rightarrow$\\
+			\column{.1\linewidth}\raggedright
+			$46\%$\\
+			$39\%$\\
+			$63\%$\\
+			\column{.27\linewidth}
+		\end{columns}~\\
+		$\Downarrow$\\
+		Performance degradation
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Forecasts assessment}
+	\begin{columns}[c]
+		\column{.5\linewidth}
+		\begin{figure}
+			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/final-model-5"}
+		\end{figure}
+		\begin{figure}
+			\includegraphics[width=\linewidth]{"project.mems_files/figure-latex/final-model-10"}
+		\end{figure}
+		\column{.5\linewidth}\centering
+		\textbf{Membach}\\
+		lockdown $\rightarrow$ during lockdown\\~\\
+		\begin{columns}[T]
+		\column{.2\linewidth}
+			\column{.33\linewidth}\raggedleft
+			\textbf{MAPE}\\\textbf{80\% CI}\\\textbf{95\% CI}\\
+			\column{.2\linewidth}\raggedleft
+			$17\% \rightarrow$\\
+			$81\% \rightarrow$\\
+			$91\% \rightarrow$\\
+			\column{.1\linewidth}\raggedright
+			${14\%}$\\
+			${82\%}$\\
+			${96\%}$\\
+			\column{.27\linewidth}
+		\end{columns}~\\
+		$\Downarrow$\\
+		Slight performance improvement\\
+		\textit{lower peaks}
+	\end{columns}
+\end{frame}
+
+
+\begin{frame}<0>[noframenumbering]{Models performance}
 	\centering Different stations behaviour\\before lockdown $\rightarrow$ during lockdown\\~\\
 	\begin{columns}[T]
 		\column{.12\linewidth}

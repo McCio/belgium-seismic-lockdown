@@ -11,13 +11,19 @@ project.mems.pdf: project.mems.Rmd project.Rmd project.after.Rmd
 	R -e "rmarkdown::render('project.mems.Rmd')"
 mems: project.mems.pdf
 
-draft.pdf: draft.tex project.bib 
+draft.pdf: draft.tex project.bib
 	-pdflatex -synctex=1 -interaction=nonstopmode draft.tex $(only_errors)
 	bibtex draft $(only_errors)
 	-pdflatex -synctex=1 -interaction=nonstopmode draft.tex $(only_errors)
 	-pdflatex -synctex=1 -interaction=nonstopmode draft.tex $(only_errors)
 
 draft: project.uccs.pdf project.mems.pdf draft.pdf
+
+slides.pdf: slides.tex project.bib
+	-pdflatex -synctex=1 -interaction=nonstopmode slides.tex $(only_errors)
+	bibtex draft $(only_errors)
+	-pdflatex -synctex=1 -interaction=nonstopmode slides.tex $(only_errors)
+	-pdflatex -synctex=1 -interaction=nonstopmode slides.tex $(only_errors)
 
 open: draft.pdf
 	okular draft.pdf $(only_errors) &

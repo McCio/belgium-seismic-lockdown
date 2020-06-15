@@ -394,10 +394,10 @@ trend <- stats::filter(seasonality.aggregate(seis.h.train), sides=2, filter = we
 
 
 ```{r show_overlap_and_diff, include=FALSE}
-show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, overlap.ylab, diff.title, diff.ylab, diff.ylab.sec, diff.ylab.sec.accuracy=.1) {
+show_overlap_and_diff <- function(base, compare, base.desc, compare.desc, xlab, overlap.ylab, diff.title, diff.ylab, diff.ylab.sec, diff.ylab.sec.accuracy=.1, base.lab="red", compare.lab="black", overlap.legend=F) {
   overlap_plot <-
-    autoplot(compare, xlab=xlab, ylab=overlap.ylab) +
-      geom_line(aes(y=base, col="red"), show.legend = F) +
+    autoplot(compare, xlab=xlab, ylab=overlap.ylab, series=compare.lab, show.legend = overlap.legend) +
+      geom_line(aes(y=base, col=base.lab), show.legend = overlap.legend) +
       labs(title=NULL, subtitle=paste0(base.desc, " vs ", compare.desc))
   diff <- compare-base
 

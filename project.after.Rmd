@@ -103,14 +103,22 @@ print(plot_grid(plots[[1]], plots[[2]], nrow = 2))
 
 plots <- show_overlap_and_diff(
   final.testing, window(plotting.forecast$mean, start=c(71,1), end=c(78,168)), xlab=seasonality.xlab,
-  base.desc = "test set during lockdown",
+  base.desc = "test set before lockdown",
+  base.lab = "Actual",
   compare.desc = paste0("forecast with ", plotting.forecast$method),
+  compare.lab = "Forecast",
+  overlap.legend = T,
   overlap.ylab = data.lab,
   diff.title = NULL,
   diff.ylab = "nm", diff.ylab.sec="%",
   diff.ylab.sec.accuracy = .01
 )
 print(plot_grid(plots[[1]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), plots[[2]] + geom_vline(aes(xintercept=lockdown.x), linetype=2), nrow = 2))
+print(
+  plots[[1]]
+    + geom_vline(aes(xintercept=lockdown.x), linetype=2)
+    + labs(title=paste0("Forecasts during lockdown with ", plotting.forecast$method), subtitle=NULL)
+)
 
 print(accuracy(plotting.forecast, c(seis.h.test, final.testing)))
 # qqPlot(plotting.model$residuals, main = paste0("Q-Q plot for ", plotting.forecast$method), xlab = "residuals")
